@@ -3,10 +3,23 @@ const mongoose = require('mongoose');
 const medicalInfoSchema = new mongoose.Schema({
   patientId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Patient',
+    ref: 'User',
     required: true
   },
-  selectedSpecialty: {
+  doctorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  date: {
+    type: Date,
+    required: true
+  },
+  time: {
+    type: String,
+    required: true
+  },
+  reason: {
     type: String,
     required: true,
     trim: true
@@ -16,9 +29,14 @@ const medicalInfoSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  appointmentDate: {
-    type: Date,
-    required: false
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'completed', 'cancelled'],
+    default: 'pending'
+  },
+  notes: {
+    type: String,
+    trim: true
   },
   isPaymentDone: {
     type: Boolean,

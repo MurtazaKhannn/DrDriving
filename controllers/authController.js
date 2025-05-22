@@ -50,4 +50,58 @@ exports.login = async (req, res) => {
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
+};
+
+// Get patient profile
+exports.getProfile = async (req, res) => {
+  try {
+    // Check if user is a patient
+    if (req.userType !== 'patient') {
+      return res.status(403).json({ error: 'Access denied. Patients only.' });
+    }
+
+    const patient = await Patient.findById(req.user._id)
+      .select('-passwordHash'); // Exclude password from response
+
+    if (!patient) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    res.json(patient);
+  } catch (error) {
+    console.error('Error fetching patient profile:', error);
+    res.status(500).json({ error: 'Error fetching profile' });
+  }
+};
+
+// Update patient profile
+exports.updateProfile = async (req, res) => {
+  try {
+    // Check if user is a patient
+    if (req.userType !== 'patient') {
+      return res.status(403).json({ error: 'Access denied. Patients only.' });
+    }
+
+    const allowedUpdates = ['name', 'phone', 'age', 'gender', 'location'];
+    const updates = Object.keys(req.body);
+    
+    // Check if all updates are allowed
+    const isValidOperation = updates.every(update => allowedUpdates.includes(update));
+    if (!isValidOperation) {
+      return res.status(400).json({ error: 'Invalid updates' });
+    }
+
+    // Update the patient
+    updates.forEach(update => req.user[update] = req.body[update]);
+    await req.user.save();
+
+    // Return updated patient without password
+    const updatedPatient = await Patient.findById(req.user._id)
+      .select('-passwordHash');
+    
+    res.json(updatedPatient);
+  } catch (error) {
+    console.error('Error updating patient profile:', error);
+    res.status(500).json({ error: 'Error updating profile' });
+  }
 }; 

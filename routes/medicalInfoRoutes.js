@@ -3,12 +3,16 @@ const router = express.Router();
 const medicalInfoController = require('../controllers/medicalInfoController');
 const auth = require('../middleware/auth');
 
-// Apply auth middleware to all routes in this router
-router.use(auth);
+// Get all doctors (public route)
+router.get('/doctors', medicalInfoController.getDoctors);
 
-// Protected routes
-router.post('/', medicalInfoController.createMedicalInfo);
-router.get('/', medicalInfoController.getMedicalInfo);
+// Patient routes
+router.post('/', auth, medicalInfoController.createMedicalInfo);
+router.get('/patient', auth, medicalInfoController.getPatientMedicalInfo);
+
+// Doctor routes
+router.get('/doctor', auth, medicalInfoController.getDoctorMedicalInfo);
+router.put('/:id/status', auth, medicalInfoController.updateStatus);
 
 // Error handling middleware
 router.use((err, req, res, next) => {
