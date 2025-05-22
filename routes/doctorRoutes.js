@@ -5,7 +5,7 @@ const auth = require('../middleware/auth');
 
 // Public routes
 router.post('/register', doctorController.register);
-router.get('/login', doctorController.login);
+router.post('/login', doctorController.login);
 
 // Protected routes
 router.use(auth);
@@ -17,6 +17,7 @@ router.get('/chats', doctorController.getChats);
 router.get('/chats/:chatId', doctorController.getChat);
 router.post('/chats/:chatId/message', doctorController.sendMessage);
 router.put('/chats/:chatId/close', doctorController.closeChat);
+router.post('/chats/:chatId/fix-messages', doctorController.fixMessages);
 
 // Error handling middleware
 router.use((err, req, res, next) => {

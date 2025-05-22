@@ -131,12 +131,18 @@ exports.getChat = async (req, res) => {
     }
 
     const { chatId } = req.params;
+    console.log('Chat ID:', chatId);
+    console.log('Doctor ID:', req.user._id);
+
     const chat = await Chat.findOne({
       _id: chatId,
       doctorId: req.user._id
     })
     .populate('patientId', 'name')
+    .populate('doctorId', 'name specialty')
     .populate('messages.sender', 'name');
+
+    console.log('Found chat:', chat);
 
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found' });
@@ -152,6 +158,7 @@ exports.getChat = async (req, res) => {
     await chat.save();
     res.json(chat);
   } catch (error) {
+    console.error('Error in getChat:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -174,8 +181,23 @@ exports.sendMessage = async (req, res) => {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
+    // Fix existing messages that don't have senderType
+    chat.messages = chat.messages.map(message => {
+      if (!message.senderType) {
+        // If sender is the doctor, set type as doctor, otherwise as patient
+        const isDoctor = message.sender && message.sender.toString() === req.user._id.toString();
+        return {
+          ...message.toObject(),
+          senderType: isDoctor ? 'doctor' : 'patient'
+        };
+      }
+      return message;
+    });
+
+    // Add new message
     chat.messages.push({
       sender: req.user._id,
+      senderType: 'doctor',
       content,
       timestamp: new Date()
     });
@@ -183,8 +205,15 @@ exports.sendMessage = async (req, res) => {
     chat.lastMessage = new Date();
     await chat.save();
 
-    res.json(chat);
+    // Populate the updated chat with sender information
+    const updatedChat = await Chat.findById(chat._id)
+      .populate('patientId', 'name')
+      .populate('doctorId', 'name specialty')
+      .populate('messages.sender', 'name');
+
+    res.json(updatedChat);
   } catch (error) {
+    console.error('Error in sendMessage:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -211,6 +240,54 @@ exports.closeChat = async (req, res) => {
     await chat.save();
 
     res.json(chat);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Fix existing messages with null sender
+exports.fixMessages = async (req, res) => {
+  try {
+    if (req.userType !== 'doctor') {
+      return res.status(403).json({ error: 'Access denied. Doctors only.' });
+    }
+
+    const { chatId } = req.params;
+    const chat = await Chat.findOne({
+      _id: chatId,
+      doctorId: req.user._id
+    });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Update messages with null sender
+    chat.messages = chat.messages.map(message => {
+      if (!message.sender) {
+        return {
+          ...message.toObject(),
+          sender: req.user._id,
+          senderType: 'doctor'
+        };
+      }
+      return message;
+    });
+
+    await chat.save();
+
+    // Get updated chat with populated sender information
+    const updatedChat = await Chat.findById(chat._id)
+      .populate('patientId', 'name')
+      .populate({
+        path: 'messages.sender',
+        select: 'name',
+        model: function() {
+          return this.senderType === 'doctor' ? 'Doctor' : 'Patient';
+        }
+      });
+
+    res.json(updatedChat);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
