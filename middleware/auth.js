@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const Patient = require('../models/Patient');
+const Doctor = require('../models/Doctor');
 
 const auth = async (req, res, next) => {
   try {
@@ -21,14 +22,32 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Find patient
-    const patient = await Patient.findOne({ _id: decoded.id });
-    if (!patient) {
-      return res.status(401).json({ error: 'Patient not found' });
+    // Try to find user in both Patient and Doctor models
+    const [patient, doctor] = await Promise.all([
+      Patient.findOne({ _id: decoded.id }),
+      Doctor.findOne({ _id: decoded.id })
+    ]);
+
+    if (!patient && !doctor) {
+      return res.status(401).json({ error: 'User not found' });
     }
-    
-    // Attach patient to request object
-    req.patient = patient;
+
+    // Attach user to request object
+    if (patient) {
+      req.user = patient;
+      req.userType = 'patient';
+    } else {
+      req.user = doctor;
+      req.userType = 'doctor';
+    }
+
+    // For backward compatibility
+    if (req.userType === 'patient') {
+      req.patient = req.user;
+    } else {
+      req.doctor = req.user;
+    }
+
     req.token = token;
     next();
   } catch (error) {

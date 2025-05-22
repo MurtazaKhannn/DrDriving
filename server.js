@@ -7,6 +7,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const medicalInfoRoutes = require('./routes/medicalInfoRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
 
 const app = express();
 
@@ -26,6 +27,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/dr-drivin
 app.use('/api', authRoutes);
 app.use('/api/medical-info', medicalInfoRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/doctor', doctorRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 
