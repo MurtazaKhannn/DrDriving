@@ -6,7 +6,7 @@ const Patient = require('../models/Patient');
 exports.getDoctors = async (req, res) => {
   try {
     const doctors = await Doctor.find()
-      .select('name specialty');
+      .select('name specialty experience qualifications');
     res.json(doctors);
   } catch (error) {
     res.status(500).json({ error: 'Error fetching doctors' });
