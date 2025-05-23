@@ -17,6 +17,37 @@ exports.register = async (req, res) => {
       availability
     } = req.body;
 
+    console.log('Received registration data:', {
+      email,
+      name,
+      specialty,
+      qualifications,
+      experience,
+      phone,
+      location,
+      availability
+    });
+
+    // Validate required fields
+    if (!email || !password || !name || !specialty || !experience || !phone || !location) {
+      console.log('Missing required fields:', {
+        email: !email,
+        password: !password,
+        name: !name,
+        specialty: !specialty,
+        experience: !experience,
+        phone: !phone,
+        location: !location
+      });
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Validate location fields
+    if (!location.city || !location.state || !location.country) {
+      console.log('Invalid location data:', location);
+      return res.status(400).json({ error: 'Invalid location data' });
+    }
+
     const existingDoctor = await Doctor.findOne({ email });
     if (existingDoctor) {
       return res.status(400).json({ error: 'Email already exists' });
@@ -36,9 +67,14 @@ exports.register = async (req, res) => {
 
     await doctor.save();
     
+    // Remove passwordHash from the response
+    const doctorResponse = doctor.toObject();
+    delete doctorResponse.passwordHash;
+    
     const token = jwt.sign({ id: doctor._id }, process.env.JWT_SECRET || 'your-secret-key');
-    res.status(201).json({ doctor, token });
+    res.status(201).json({ doctor: doctorResponse, token });
   } catch (error) {
+    console.error('Doctor registration error:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -166,37 +202,34 @@ exports.getChat = async (req, res) => {
 // Send message in chat
 exports.sendMessage = async (req, res) => {
   try {
-    if (req.userType !== 'doctor') {
-      return res.status(403).json({ error: 'Access denied. Doctors only.' });
-    }
+    const { chatId } = req.params;  // Get chatId from URL params
+    const { content } = req.body;
+    const doctorId = req.user._id;
 
-    const { chatId, content } = req.body;
-    const chat = await Chat.findOne({
+    // First try to find chat without appointmentId
+    let chat = await Chat.findOne({
       _id: chatId,
-      doctorId: req.user._id,
+      doctorId,
       status: 'active'
     });
+
+    // If not found, try with appointmentId if provided
+    if (!chat && req.body.appointmentId) {
+      chat = await Chat.findOne({
+        _id: chatId,
+        doctorId,
+        appointmentId: req.body.appointmentId,
+        status: 'active'
+      });
+    }
 
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
-    // Fix existing messages that don't have senderType
-    chat.messages = chat.messages.map(message => {
-      if (!message.senderType) {
-        // If sender is the doctor, set type as doctor, otherwise as patient
-        const isDoctor = message.sender && message.sender.toString() === req.user._id.toString();
-        return {
-          ...message.toObject(),
-          senderType: isDoctor ? 'doctor' : 'patient'
-        };
-      }
-      return message;
-    });
-
     // Add new message
     chat.messages.push({
-      sender: req.user._id,
+      sender: doctorId,
       senderType: 'doctor',
       content,
       timestamp: new Date()
@@ -211,7 +244,7 @@ exports.sendMessage = async (req, res) => {
       .populate('doctorId', 'name specialty')
       .populate('messages.sender', 'name');
 
-    res.json(updatedChat);
+    res.status(200).json(updatedChat);
   } catch (error) {
     console.error('Error in sendMessage:', error);
     res.status(400).json({ error: error.message });
@@ -289,6 +322,67 @@ exports.fixMessages = async (req, res) => {
 
     res.json(updatedChat);
   } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Get doctor by ID
+exports.getDoctorById = async (req, res) => {
+  try {
+    const doctor = await Doctor.findById(req.params.id)
+      .select('-passwordHash'); // Exclude password hash from response
+
+    if (!doctor) {
+      return res.status(404).json({ error: 'Doctor not found' });
+    }
+
+    res.json(doctor);
+  } catch (error) {
+    console.error('Error fetching doctor:', error);
+    res.status(500).json({ error: 'Error fetching doctor information' });
+  }
+};
+
+// Create a new chat
+exports.createChat = async (req, res) => {
+  try {
+    if (req.userType !== 'doctor') {
+      return res.status(403).json({ error: 'Access denied. Doctors only.' });
+    }
+
+    const { patientId, appointmentId } = req.body;
+    const doctorId = req.user._id;
+
+    // Check if chat already exists
+    let chat = await Chat.findOne({
+      doctorId,
+      patientId,
+      appointmentId,
+      status: 'active'
+    });
+
+    if (chat) {
+      return res.status(200).json(chat);
+    }
+
+    // Create new chat
+    chat = new Chat({
+      doctorId,
+      patientId,
+      appointmentId,
+      messages: []
+    });
+
+    await chat.save();
+
+    // Populate the chat with patient information
+    const populatedChat = await Chat.findById(chat._id)
+      .populate('patientId', 'name')
+      .populate('doctorId', 'name specialty');
+
+    res.status(201).json(populatedChat);
+  } catch (error) {
+    console.error('Error in createChat:', error);
     res.status(400).json({ error: error.message });
   }
 }; 

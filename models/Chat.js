@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema({
   sender: {
     type: mongoose.Schema.Types.ObjectId,
+    refPath: 'senderType',
     required: true
   },
   senderType: {
@@ -33,6 +34,11 @@ const chatSchema = new mongoose.Schema({
   doctorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Doctor',
+    required: true
+  },
+  appointmentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MedicalInfo',
     required: true
   },
   messages: [messageSchema],

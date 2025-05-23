@@ -6,13 +6,30 @@ const auth = require('../middleware/auth');
 // Get all doctors (public route)
 router.get('/doctors', medicalInfoController.getDoctors);
 
+// Get doctor's appointments for a specific date (public route)
+router.get('/doctor/:doctorId/date/:date', medicalInfoController.getDoctorAppointmentsByDate);
+
+// Protected routes
+router.use(auth);
+
+// Create medical info/appointment
+router.post('/', medicalInfoController.createMedicalInfo);
+
+// Get doctor's appointments
+router.get('/doctor/appointments', medicalInfoController.getDoctorAppointments);
+
+// Get patient's appointments
+router.get('/patient/appointments', medicalInfoController.getPatientAppointments);
+
+// Update appointment status
+router.patch('/:appointmentId/status', medicalInfoController.updateAppointmentStatus);
+
 // Patient routes
-router.post('/', auth, medicalInfoController.createMedicalInfo);
-router.get('/patient', auth, medicalInfoController.getPatientMedicalInfo);
+router.get('/patient', medicalInfoController.getPatientMedicalInfo);
 
 // Doctor routes
-router.get('/doctor', auth, medicalInfoController.getDoctorMedicalInfo);
-router.put('/:id/status', auth, medicalInfoController.updateStatus);
+router.get('/doctor', medicalInfoController.getDoctorMedicalInfo);
+router.put('/:id/status', medicalInfoController.updateStatus);
 
 // Error handling middleware
 router.use((err, req, res, next) => {

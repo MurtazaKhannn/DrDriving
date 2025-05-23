@@ -8,7 +8,7 @@ router.use(auth);
 
 // Chat routes
 router.post('/', chatController.createChat);
-router.post('/message', chatController.sendMessage);
+router.post('/:chatId/message', chatController.sendMessage);
 router.get('/', chatController.getPatientChats);
 router.get('/:chatId', chatController.getChat);
 router.put('/:chatId/close', chatController.closeChat);

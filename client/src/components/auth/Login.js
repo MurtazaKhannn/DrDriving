@@ -64,14 +64,18 @@ const Login = () => {
         isClosable: true,
       });
 
-      navigate(`/${userType}/dashboard`);
+      // Add a small delay before navigation to ensure toast is visible
+      setTimeout(() => {
+        navigate(`/${userType}/dashboard`);
+      }, 1000);
     } catch (error) {
       console.error('Login error:', error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'An error occurred';
       toast({
-        title: 'Error',
-        description: error.response?.data?.message || error.message || 'An error occurred',
+        title: 'Login Failed',
+        description: errorMessage,
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     } finally {

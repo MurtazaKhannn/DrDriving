@@ -13,11 +13,15 @@ router.get('/profile', doctorController.getProfile);
 router.patch('/profile', doctorController.updateProfile);
 
 // Chat routes
+router.post('/chats', doctorController.createChat);
 router.get('/chats', doctorController.getChats);
 router.get('/chats/:chatId', doctorController.getChat);
 router.post('/chats/:chatId/message', doctorController.sendMessage);
 router.put('/chats/:chatId/close', doctorController.closeChat);
 router.post('/chats/:chatId/fix-messages', doctorController.fixMessages);
+
+// Public doctor info route (must be after specific routes)
+router.get('/:id', doctorController.getDoctorById);
 
 // Error handling middleware
 router.use((err, req, res, next) => {

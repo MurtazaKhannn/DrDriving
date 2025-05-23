@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,12 +18,41 @@ import {
   useColorModeValue,
   Grid,
   GridItem,
+  HStack,
+  Checkbox,
 } from '@chakra-ui/react';
 import axios from '../../utils/axios';
+import { AddIcon } from '@chakra-ui/icons';
 
 const Signup = () => {
   const [userType, setUserType] = useState('patient');
-  const [formData, setFormData] = useState({
+  const initialDoctorState = {
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    specialty: '',
+    qualifications: [{
+      degree: '',
+      institution: '',
+      year: ''
+    }],
+    experience: '',
+    location: {
+      city: '',
+      state: '',
+      country: ''
+    },
+    availability: {
+      workingHours: {
+        start: '09:00',
+        end: '17:00'
+      },
+      daysAvailable: []
+    }
+  };
+
+  const initialPatientState = {
     name: '',
     email: '',
     password: '',
@@ -31,24 +60,97 @@ const Signup = () => {
     age: '',
     gender: '',
     bloodGroup: '',
-    address: '',
-    // Doctor specific fields
-    specialty: '',
-    qualifications: '',
-    experience: '',
-    location: '',
-  });
+    address: ''
+  };
+
+  const [formData, setFormData] = useState(initialPatientState);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
+  // Reset form when user type changes
+  useEffect(() => {
+    setFormData(userType === 'doctor' ? initialDoctorState : initialPatientState);
+  }, [userType]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    
+    // Handle nested fields (e.g., location.city)
+    if (name.includes('.')) {
+      const parts = name.split('.');
+      
+      // Handle qualifications fields
+      if (parts[0] === 'qualifications') {
+        const [_, index, field] = parts;
+        setFormData(prev => ({
+          ...prev,
+          qualifications: prev.qualifications.map((qual, i) => 
+            i === parseInt(index) ? { ...qual, [field]: value } : qual
+          )
+        }));
+      } 
+      // Handle location fields
+      else if (parts[0] === 'location') {
+        const [parent, child] = parts;
+        setFormData(prev => ({
+          ...prev,
+          [parent]: {
+            ...prev[parent],
+            [child]: value
+          }
+        }));
+      }
+      // Handle availability fields
+      else if (parts[0] === 'availability') {
+        const [parent, child, subChild] = parts;
+        setFormData(prev => ({
+          ...prev,
+          [parent]: {
+            ...prev[parent],
+            [child]: {
+              ...prev[parent][child],
+              [subChild]: value
+            }
+          }
+        }));
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const addQualification = () => {
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
+      qualifications: [
+        ...prev.qualifications,
+        { degree: '', institution: '', year: '' }
+      ]
+    }));
+  };
+
+  const removeQualification = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      qualifications: prev.qualifications.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAvailabilityChange = (day, isChecked) => {
+    setFormData(prev => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        daysAvailable: isChecked
+          ? [...(prev.availability?.daysAvailable || []), day]
+          : (prev.availability?.daysAvailable || []).filter(d => d !== day)
+      }
     }));
   };
 
@@ -58,7 +160,54 @@ const Signup = () => {
 
     try {
       const endpoint = userType === 'doctor' ? '/doctor/register' : '/register';
-      const response = await axios.post(endpoint, formData);
+      
+      // Format the data based on user type
+      const requestData = userType === 'doctor' 
+        ? {
+            ...formData,
+            // Ensure location is properly structured
+            location: {
+              city: formData.location.city,
+              state: formData.location.state,
+              country: formData.location.country
+            },
+            // Ensure availability is properly structured
+            availability: {
+              workingHours: {
+                start: formData.availability.workingHours.start,
+                end: formData.availability.workingHours.end
+              },
+              daysAvailable: formData.availability.daysAvailable
+            }
+          }
+        : formData;
+
+      console.log('Sending registration data:', requestData);
+
+      // Validate required fields for doctor
+      if (userType === 'doctor') {
+        const requiredFields = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          specialty: formData.specialty,
+          experience: formData.experience,
+          phone: formData.phone,
+          'location.city': formData.location.city,
+          'location.state': formData.location.state,
+          'location.country': formData.location.country
+        };
+
+        const missingFields = Object.entries(requiredFields)
+          .filter(([_, value]) => !value)
+          .map(([key]) => key);
+
+        if (missingFields.length > 0) {
+          throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+      }
+
+      const response = await axios.post(endpoint, requestData);
       
       // Check if response has the expected data structure
       if (!response.data || !response.data.token) {
@@ -250,13 +399,22 @@ const Signup = () => {
                         <GridItem>
                           <FormControl isRequired>
                             <FormLabel>Specialty</FormLabel>
-                            <Input
+                            <Select
                               name="specialty"
                               value={formData.specialty}
                               onChange={handleChange}
-                              placeholder="Enter your specialty"
                               bg="white"
-                            />
+                            >
+                              <option value="">Select specialty</option>
+                              <option value="Cardiology">Cardiology</option>
+                              <option value="Dermatology">Dermatology</option>
+                              <option value="Neurology">Neurology</option>
+                              <option value="Orthopedics">Orthopedics</option>
+                              <option value="Pediatrics">Pediatrics</option>
+                              <option value="Psychiatry">Psychiatry</option>
+                              <option value="Gynecology">Gynecology</option>
+                              <option value="Ophthalmology">Ophthalmology</option>
+                            </Select>
                           </FormControl>
                         </GridItem>
 
@@ -270,20 +428,143 @@ const Signup = () => {
                               onChange={handleChange}
                               placeholder="Years of experience"
                               bg="white"
+                              min="0"
+                            />
+                          </FormControl>
+                        </GridItem>
+
+                        <GridItem colSpan={2}>
+                          <FormControl isRequired>
+                            <FormLabel>Qualifications</FormLabel>
+                            <VStack spacing={4} align="stretch">
+                              {userType === 'doctor' && Array.isArray(formData.qualifications) && formData.qualifications.map((qual, index) => (
+                                <HStack key={index} spacing={4}>
+                                  <Input
+                                    name={`qualifications.${index}.degree`}
+                                    value={qual.degree}
+                                    onChange={handleChange}
+                                    placeholder="Degree"
+                                    bg="white"
+                                  />
+                                  <Input
+                                    name={`qualifications.${index}.institution`}
+                                    value={qual.institution}
+                                    onChange={handleChange}
+                                    placeholder="Institution"
+                                    bg="white"
+                                  />
+                                  <Input
+                                    name={`qualifications.${index}.year`}
+                                    value={qual.year}
+                                    onChange={handleChange}
+                                    placeholder="Year"
+                                    type="number"
+                                    bg="white"
+                                  />
+                                  {index > 0 && (
+                                    <Button
+                                      colorScheme="red"
+                                      size="sm"
+                                      onClick={() => removeQualification(index)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  )}
+                                </HStack>
+                              ))}
+                              <Button
+                                colorScheme="blue"
+                                size="sm"
+                                onClick={addQualification}
+                                leftIcon={<AddIcon />}
+                              >
+                                Add Qualification
+                              </Button>
+                            </VStack>
+                          </FormControl>
+                        </GridItem>
+
+                        <GridItem>
+                          <FormControl isRequired>
+                            <FormLabel>City</FormLabel>
+                            <Input
+                              name="location.city"
+                              value={formData.location?.city || ''}
+                              onChange={handleChange}
+                              placeholder="Enter your city"
+                              bg="white"
                             />
                           </FormControl>
                         </GridItem>
 
                         <GridItem>
                           <FormControl isRequired>
-                            <FormLabel>Qualifications</FormLabel>
+                            <FormLabel>State</FormLabel>
                             <Input
-                              name="qualifications"
-                              value={formData.qualifications}
+                              name="location.state"
+                              value={formData.location?.state || ''}
                               onChange={handleChange}
-                              placeholder="Enter your qualifications"
+                              placeholder="Enter your state"
                               bg="white"
                             />
+                          </FormControl>
+                        </GridItem>
+
+                        <GridItem>
+                          <FormControl isRequired>
+                            <FormLabel>Country</FormLabel>
+                            <Input
+                              name="location.country"
+                              value={formData.location?.country || ''}
+                              onChange={handleChange}
+                              placeholder="Enter your country"
+                              bg="white"
+                            />
+                          </FormControl>
+                        </GridItem>
+
+                        <GridItem colSpan={2}>
+                          <FormControl isRequired>
+                            <FormLabel>Working Hours</FormLabel>
+                            <HStack spacing={4}>
+                              <FormControl>
+                                <FormLabel>Start Time</FormLabel>
+                                <Input
+                                  type="time"
+                                  name="availability.workingHours.start"
+                                  value={formData.availability?.workingHours?.start || '09:00'}
+                                  onChange={handleChange}
+                                  bg="white"
+                                />
+                              </FormControl>
+                              <FormControl>
+                                <FormLabel>End Time</FormLabel>
+                                <Input
+                                  type="time"
+                                  name="availability.workingHours.end"
+                                  value={formData.availability?.workingHours?.end || '23:00'}
+                                  onChange={handleChange}
+                                  bg="white"
+                                />
+                              </FormControl>
+                            </HStack>
+                          </FormControl>
+                        </GridItem>
+
+                        <GridItem colSpan={2}>
+                          <FormControl isRequired>
+                            <FormLabel>Available Days</FormLabel>
+                            <HStack spacing={4} wrap="wrap">
+                              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                                <Checkbox
+                                  key={day}
+                                  isChecked={formData.availability?.daysAvailable?.includes(day)}
+                                  onChange={(e) => handleAvailabilityChange(day, e.target.checked)}
+                                >
+                                  {day}
+                                </Checkbox>
+                              ))}
+                            </HStack>
                           </FormControl>
                         </GridItem>
                       </>

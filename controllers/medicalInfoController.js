@@ -13,22 +13,82 @@ exports.getDoctors = async (req, res) => {
   }
 };
 
-// Create new medical info/appointment
+// Create medical info/appointment
 exports.createMedicalInfo = async (req, res) => {
   try {
-    const { doctorId, date, time, reason, symptoms } = req.body;
+    const { doctorId, date, time, reason, symptoms, notes } = req.body;
     const patientId = req.user._id;
 
+    // Get doctor's availability
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ error: 'Doctor not found' });
+    }
+
+    // Check if doctor is available on the selected day
+    const appointmentDate = new Date(date);
+    const dayOfWeek = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
+    
+    if (!doctor.availability.daysAvailable.includes(dayOfWeek)) {
+      return res.status(400).json({ error: 'Doctor is not available on this day' });
+    }
+
+    // Check if the time is within working hours
+    const [appointmentHour] = time.split(':');
+    const [startHour] = doctor.availability.workingHours.start.split(':');
+    const [endHour] = doctor.availability.workingHours.end.split(':');
+
+    const appointmentHourNum = parseInt(appointmentHour);
+    const startHourNum = parseInt(startHour);
+    const endHourNum = parseInt(endHour);
+
+    // Handle overnight shifts (e.g., 22:00 - 10:00)
+    let isWithinWorkingHours;
+    if (startHourNum > endHourNum) {
+      // For overnight shifts, time is valid if it's after start time OR before end time
+      isWithinWorkingHours = appointmentHourNum >= startHourNum || appointmentHourNum < endHourNum;
+    } else {
+      // For normal shifts, time must be between start and end
+      isWithinWorkingHours = appointmentHourNum >= startHourNum && appointmentHourNum < endHourNum;
+    }
+
+    if (!isWithinWorkingHours) {
+      return res.status(400).json({ error: 'Appointment time is outside working hours' });
+    }
+
+    // Check if there's already an appointment at this time
+    const existingAppointment = await MedicalInfo.findOne({
+      doctorId,
+      date: {
+        $gte: new Date(appointmentDate.setHours(0, 0, 0)),
+        $lt: new Date(appointmentDate.setHours(23, 59, 59))
+      },
+      time,
+      status: { $in: ['pending', 'confirmed'] }
+    });
+
+    if (existingAppointment) {
+      return res.status(400).json({ error: 'This time slot is already booked' });
+    }
+
+    // Create new medical info/appointment
     const medicalInfo = new MedicalInfo({
       patientId,
       doctorId,
-      date,
+      date: appointmentDate,
       time,
       reason,
-      symptoms
+      symptoms,
+      notes,
+      status: 'pending'
     });
 
     await medicalInfo.save();
+
+    // Populate doctor and patient details
+    await medicalInfo.populate('doctorId', 'name specialty');
+    await medicalInfo.populate('patientId', 'name');
+
     res.status(201).json(medicalInfo);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -59,6 +119,71 @@ exports.getDoctorMedicalInfo = async (req, res) => {
   }
 };
 
+// Get doctor's appointments
+exports.getDoctorAppointments = async (req, res) => {
+  try {
+    if (req.userType !== 'doctor') {
+      return res.status(403).json({ error: 'Access denied. Doctors only.' });
+    }
+
+    const appointments = await MedicalInfo.find({ doctorId: req.user._id })
+      .populate('patientId', 'name')
+      .sort({ date: 1, time: 1 });
+
+    res.json(appointments);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Get patient's appointments
+exports.getPatientAppointments = async (req, res) => {
+  try {
+    if (req.userType !== 'patient') {
+      return res.status(403).json({ error: 'Access denied. Patients only.' });
+    }
+
+    const appointments = await MedicalInfo.find({ patientId: req.user._id })
+      .populate('doctorId', 'name specialty')
+      .sort({ date: 1, time: 1 });
+
+    res.json(appointments);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Update appointment status
+exports.updateAppointmentStatus = async (req, res) => {
+  try {
+    if (req.userType !== 'doctor') {
+      return res.status(403).json({ error: 'Access denied. Doctors only.' });
+    }
+
+    const { appointmentId } = req.params;
+    const { status } = req.body;
+
+    const appointment = await MedicalInfo.findOne({
+      _id: appointmentId,
+      doctorId: req.user._id
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    appointment.status = status;
+    await appointment.save();
+
+    await appointment.populate('patientId', 'name');
+    await appointment.populate('doctorId', 'name specialty');
+
+    res.json(appointment);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 // Update medical info status
 exports.updateStatus = async (req, res) => {
   try {
@@ -80,5 +205,33 @@ exports.updateStatus = async (req, res) => {
     res.json(medicalInfo);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+};
+
+// Get doctor's appointments for a specific date
+exports.getDoctorAppointmentsByDate = async (req, res) => {
+  try {
+    const { doctorId, date } = req.params;
+    
+    // Create date range for the specified date
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const appointments = await MedicalInfo.find({
+      doctorId,
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      },
+      status: { $in: ['pending', 'confirmed'] }
+    }).select('time status');
+
+    res.json(appointments);
+  } catch (error) {
+    console.error('Error fetching doctor appointments by date:', error);
+    res.status(500).json({ error: 'Error fetching appointments' });
   }
 }; 
