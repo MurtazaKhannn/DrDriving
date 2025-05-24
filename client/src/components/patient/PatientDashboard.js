@@ -51,6 +51,7 @@ const PatientDashboard = () => {
     try {
       const response = await axios.get('/medical-info/doctors');
       setDoctors(response.data);
+      // console.log(response.data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching doctors:', error);
@@ -198,6 +199,8 @@ const PatientDashboard = () => {
                                   <Heading size="sm">Dr. {doctor.name}</Heading>
                                   <Text color="gray.600">Specialty: {doctor.specialty}</Text>
                                   <Text color="gray.600">Experience: {doctor.experience} years</Text>
+                                  <Text color="gray.600"> {doctor.rating} Stars</Text>
+                                  <Text color="gray.600"> {doctor.totalRatings} people rated this doctor</Text>
                                   <Box>
                                     <Text color="gray.600" fontWeight="medium">Qualifications:</Text>
                                     {Array.isArray(doctor.qualifications) ? (
