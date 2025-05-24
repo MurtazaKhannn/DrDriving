@@ -41,6 +41,10 @@ const medicalInfoSchema = new mongoose.Schema({
   isPaymentDone: {
     type: Boolean,
     default: false
+  },
+  hasRated: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

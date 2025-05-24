@@ -234,4 +234,60 @@ exports.getDoctorAppointmentsByDate = async (req, res) => {
     console.error('Error fetching doctor appointments by date:', error);
     res.status(500).json({ error: 'Error fetching appointments' });
   }
+};
+
+// Rate doctor after appointment
+exports.rateDoctor = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const { rating } = req.body;
+    const patientId = req.user._id;
+
+    // Validate rating
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    // Find the appointment
+    const appointment = await MedicalInfo.findOne({
+      _id: appointmentId,
+      patientId,
+      status: 'completed'
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ error: 'Completed appointment not found' });
+    }
+
+    if (appointment.hasRated) {
+      return res.status(400).json({ error: 'You have already rated this appointment' });
+    }
+
+    // Update doctor's rating
+    const doctor = await Doctor.findById(appointment.doctorId);
+    if (!doctor) {
+      return res.status(404).json({ error: 'Doctor not found' });
+    }
+
+    // Calculate new average rating
+    const newTotalRatings = doctor.totalRatings + 1;
+    const newRating = ((doctor.rating * doctor.totalRatings) + rating) / newTotalRatings;
+
+    // Update doctor's rating
+    doctor.rating = newRating;
+    doctor.totalRatings = newTotalRatings;
+    await doctor.save();
+
+    // Mark appointment as rated
+    appointment.hasRated = true;
+    await appointment.save();
+
+    res.json({ 
+      message: 'Rating submitted successfully',
+      doctorRating: doctor.rating,
+      totalRatings: doctor.totalRatings
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 }; 

@@ -23,6 +23,7 @@ import {
 } from '@chakra-ui/react';
 import axios from '../../utils/axios';
 import AppointmentChat from '../common/AppointmentChat';
+import DoctorRating from '../common/DoctorRating';
 import { useNavigate } from 'react-router-dom';
 
 const PatientAppointments = () => {
@@ -47,7 +48,7 @@ const PatientAppointments = () => {
         title: 'Error',
         description: 'Failed to fetch appointments',
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     } finally {
@@ -56,7 +57,6 @@ const PatientAppointments = () => {
   };
 
   const handleAppointmentStatus = (appointment) => {
-    // Show notification based on appointment status
     if (appointment.status === 'cancelled') {
       toast({
         title: 'Appointment Cancelled',
@@ -89,6 +89,37 @@ const PatientAppointments = () => {
       default:
         return 'gray';
     }
+  };
+
+  const handleRatingSubmit = (ratingData) => {
+    if (!ratingData) return;
+
+    // Update the appointments list to reflect the new rating
+    setAppointments(prevAppointments =>
+      prevAppointments.map(apt => {
+        if (apt._id === ratingData.appointmentId) {
+          return {
+            ...apt,
+            hasRated: true,
+            doctorId: {
+              ...apt.doctorId,
+              rating: ratingData.doctorRating,
+              totalRatings: ratingData.totalRatings
+            }
+          };
+        }
+        return apt;
+      })
+    );
+
+    // Show success message
+    toast({
+      title: 'Rating Submitted',
+      description: 'Thank you for rating the doctor!',
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    });
   };
 
   if (loading) {
@@ -124,6 +155,11 @@ const PatientAppointments = () => {
                   <Box>
                     <Text fontWeight="bold">Doctor: Dr. {appointment.doctorId.name}</Text>
                     <Text>Specialty: {appointment.doctorId.specialty}</Text>
+                    {appointment.doctorId.rating > 0 && (
+                      <Text>
+                        Rating: {appointment.doctorId.rating.toFixed(1)} ({appointment.doctorId.totalRatings} ratings)
+                      </Text>
+                    )}
                   </Box>
                   
                   <Box>
@@ -169,6 +205,21 @@ const PatientAppointments = () => {
                       >
                         Open Chat
                       </Button>
+                    )}
+
+                    {appointment.status === 'completed' && (
+                      <>
+                        {!appointment.hasRated ? (
+                          <DoctorRating
+                            appointmentId={appointment._id}
+                            onRatingSubmit={handleRatingSubmit}
+                          />
+                        ) : (
+                          <Badge colorScheme="green" alignSelf="flex-start">
+                            RATED
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </HStack>
                 </VStack>

@@ -31,6 +31,9 @@ router.get('/patient', medicalInfoController.getPatientMedicalInfo);
 router.get('/doctor', medicalInfoController.getDoctorMedicalInfo);
 router.put('/:id/status', medicalInfoController.updateStatus);
 
+// Rate doctor after appointment
+router.post('/appointment/:appointmentId/rate', medicalInfoController.rateDoctor);
+
 // Error handling middleware
 router.use((err, req, res, next) => {
   console.error(err.stack);

@@ -13,17 +13,35 @@ import {
   Button,
   HStack,
   useColorModeValue,
+  Input,
+  IconButton,
+  Flex,
+  Spinner,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
+import { FaPaperPlane } from 'react-icons/fa';
 import Navbar from '../common/Navbar';
 import AppointmentForm from './AppointmentForm';
+import HospitalSearch from '../common/HospitalSearch';
 import axios from '../../utils/axios';
+import axiosInstance from 'axios';
 
 const PatientDashboard = () => {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const navigate = useNavigate();
   const cardBg = useColorModeValue('white', 'gray.700');
+
+  // Create a separate axios instance for chatbot API
+  const chatbotAxios = axiosInstance.create({
+    baseURL: 'https://dr-driving-ai.vercel.app',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
 
   useEffect(() => {
     fetchDoctors();
@@ -37,6 +55,45 @@ const PatientDashboard = () => {
     } catch (error) {
       console.error('Error fetching doctors:', error);
       setLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!message.trim()) return;
+
+    // Add user message to chat
+    const userMessage = { type: 'user', content: message };
+    setChatHistory(prev => [...prev, userMessage]);
+    setMessage('');
+    setIsChatLoading(true);
+
+    try {
+      // Format history according to backend requirements
+      const formattedHistory = chatHistory.map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        message: msg.content
+      }));
+
+      // Use the separate axios instance for chatbot API
+      const response = await chatbotAxios.post('/api/chat', {
+        message: message,
+        history: formattedHistory,
+        userId: 'user123',
+        doctors: doctors
+      });
+
+      // Add bot response to chat using the message field from response
+      const botMessage = { type: 'bot', content: response.data.message };
+      setChatHistory(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error getting chatbot response:', error);
+      const errorMessage = { 
+        type: 'bot', 
+        content: 'Sorry, I encountered an error. Please try again.' 
+      };
+      setChatHistory(prev => [...prev, errorMessage]);
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -57,7 +114,7 @@ const PatientDashboard = () => {
           </HStack>
 
           <Grid templateColumns={{ base: '1fr', lg: 'repeat(2, 1fr)' }} gap={8}>
-            <GridItem>
+            <GridItem position="sticky" top="100px" height="fit-content">
               <Card bg={cardBg} boxShadow="md">
                 <CardBody>
                   <VStack spacing={4} align="stretch">
@@ -66,54 +123,120 @@ const PatientDashboard = () => {
                   </VStack>
                 </CardBody>
               </Card>
-            </GridItem>
-            
-            <GridItem>
-              <Card bg={cardBg} boxShadow="md">
+
+              <Card bg={cardBg} boxShadow="md" mt={4}>
                 <CardBody>
                   <VStack spacing={4} align="stretch">
-                    <Heading size="md">Available Doctors</Heading>
+                    <Heading size="md">Doctor Recommendation Assistant</Heading>
+                    <Text fontSize="sm" color="gray.600">
+                      Describe your symptoms and I'll help you find the right doctor.
+                    </Text>
                     
-                    {loading ? (
-                      <Text>Loading doctors...</Text>
-                    ) : doctors.length > 0 ? (
-                      <SimpleGrid columns={1} spacing={4}>
-                        {doctors.map(doctor => (
-                          <Card key={doctor._id} variant="outline">
-                            <CardBody>
-                              <VStack align="start" spacing={2}>
-                                <Heading size="sm">Dr. {doctor.name}</Heading>
-                                <Text color="gray.600">Specialty: {doctor.specialty}</Text>
-                                <Text color="gray.600">Experience: {doctor.experience} years</Text>
-                                <Box>
-                                  <Text color="gray.600" fontWeight="medium">Qualifications:</Text>
-                                  {Array.isArray(doctor.qualifications) ? (
-                                    <VStack align="start" spacing={1} mt={1}>
-                                      {doctor.qualifications.map((qual, index) => (
-                                        <Text key={index} color="gray.600" fontSize="sm">
-                                          • {qual.degree} from {qual.institution} ({qual.year})
-                                        </Text>
-                                      ))}
-                                    </VStack>
-                                  ) : (
-                                    <Text color="gray.600" fontSize="sm">
-                                      {typeof doctor.qualifications === 'string' 
-                                        ? doctor.qualifications 
-                                        : 'No qualifications listed'}
-                                    </Text>
-                                  )}
-                                </Box>
-                              </VStack>
-                            </CardBody>
-                          </Card>
-                        ))}
-                      </SimpleGrid>
-                    ) : (
-                      <Text>No doctors available at the moment.</Text>
-                    )}
+                    <Box 
+                      height="300px" 
+                      overflowY="auto" 
+                      borderWidth={1} 
+                      borderRadius="md" 
+                      p={4}
+                      bg={useColorModeValue('gray.50', 'gray.800')}
+                    >
+                      {chatHistory.map((msg, index) => (
+                        <Box
+                          key={index}
+                          mb={2}
+                          p={2}
+                          borderRadius="md"
+                          bg={msg.type === 'user' ? 'blue.100' : 'gray.100'}
+                          alignSelf={msg.type === 'user' ? 'flex-end' : 'flex-start'}
+                          maxW="80%"
+                        >
+                          <Text>{msg.content}</Text>
+                        </Box>
+                      ))}
+                      {isChatLoading && (
+                        <Flex justify="center" mt={2}>
+                          <Spinner size="sm" />
+                        </Flex>
+                      )}
+                    </Box>
+
+                    <Flex>
+                      <Input
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="Describe your symptoms..."
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      />
+                      <IconButton
+                        ml={2}
+                        colorScheme="blue"
+                        icon={<FaPaperPlane />}
+                        onClick={handleSendMessage}
+                        isLoading={isChatLoading}
+                      />
+                    </Flex>
                   </VStack>
                 </CardBody>
               </Card>
+            </GridItem>
+            
+            <GridItem>
+              <VStack spacing={4} align="stretch">
+                <Card bg={cardBg} boxShadow="md">
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">Available Doctors</Heading>
+                      
+                      {loading ? (
+                        <Text>Loading doctors...</Text>
+                      ) : doctors.length > 0 ? (
+                        <SimpleGrid columns={1} spacing={4}>
+                          {doctors.map(doctor => (
+                            <Card key={doctor._id} variant="outline">
+                              <CardBody>
+                                <VStack align="start" spacing={2}>
+                                  <Heading size="sm">Dr. {doctor.name}</Heading>
+                                  <Text color="gray.600">Specialty: {doctor.specialty}</Text>
+                                  <Text color="gray.600">Experience: {doctor.experience} years</Text>
+                                  <Box>
+                                    <Text color="gray.600" fontWeight="medium">Qualifications:</Text>
+                                    {Array.isArray(doctor.qualifications) ? (
+                                      <VStack align="start" spacing={1} mt={1}>
+                                        {doctor.qualifications.map((qual, index) => (
+                                          <Text key={index} color="gray.600" fontSize="sm">
+                                            • {qual.degree} from {qual.institution} ({qual.year})
+                                          </Text>
+                                        ))}
+                                      </VStack>
+                                    ) : (
+                                      <Text color="gray.600" fontSize="sm">
+                                        {typeof doctor.qualifications === 'string' 
+                                          ? doctor.qualifications 
+                                          : 'No qualifications listed'}
+                                      </Text>
+                                    )}
+                                  </Box>
+                                </VStack>
+                              </CardBody>
+                            </Card>
+                          ))}
+                        </SimpleGrid>
+                      ) : (
+                        <Text>No doctors available at the moment.</Text>
+                      )}
+                    </VStack>
+                  </CardBody>
+                </Card>
+
+                <Card bg={cardBg} boxShadow="md">
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">Find Nearby Hospitals</Heading>
+                      <HospitalSearch />
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </VStack>
             </GridItem>
           </Grid>
         </VStack>
