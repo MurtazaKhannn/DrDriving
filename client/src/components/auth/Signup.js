@@ -60,7 +60,12 @@ const Signup = () => {
     age: '',
     gender: '',
     bloodGroup: '',
-    address: ''
+    address: '',
+    location: {
+      city: '',
+      state: '',
+      country: ''
+    }
   };
 
   const [formData, setFormData] = useState(initialPatientState);
@@ -159,7 +164,7 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const endpoint = userType === 'doctor' ? '/doctor/register' : '/register';
+      const endpoint = userType === 'doctor' ? '/doctor/register' : '/signup';
       
       // Format the data based on user type
       const requestData = userType === 'doctor' 
@@ -365,9 +370,9 @@ const Signup = () => {
                               bg="white"
                             >
                               <option value="">Select gender</option>
-                              <option value="male">Male</option>
-                              <option value="female">Female</option>
-                              <option value="other">Other</option>
+                              <option value="Male">Male</option>
+                              <option value="Female">Female</option>
+                              <option value="Other">Other</option>
                             </Select>
                           </FormControl>
                         </GridItem>
@@ -391,6 +396,45 @@ const Signup = () => {
                               <option value="O+">O+</option>
                               <option value="O-">O-</option>
                             </Select>
+                          </FormControl>
+                        </GridItem>
+
+                        <GridItem>
+                          <FormControl isRequired>
+                            <FormLabel>City</FormLabel>
+                            <Input
+                              name="location.city"
+                              value={formData.location?.city || ''}
+                              onChange={handleChange}
+                              placeholder="Enter your city"
+                              bg="white"
+                            />
+                          </FormControl>
+                        </GridItem>
+
+                        <GridItem>
+                          <FormControl isRequired>
+                            <FormLabel>State</FormLabel>
+                            <Input
+                              name="location.state"
+                              value={formData.location?.state || ''}
+                              onChange={handleChange}
+                              placeholder="Enter your state"
+                              bg="white"
+                            />
+                          </FormControl>
+                        </GridItem>
+
+                        <GridItem>
+                          <FormControl isRequired>
+                            <FormLabel>Country</FormLabel>
+                            <Input
+                              name="location.country"
+                              value={formData.location?.country || ''}
+                              onChange={handleChange}
+                              placeholder="Enter your country"
+                              bg="white"
+                            />
                           </FormControl>
                         </GridItem>
                       </>
