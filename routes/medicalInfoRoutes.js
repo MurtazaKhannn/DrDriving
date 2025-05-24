@@ -34,6 +34,10 @@ router.put('/:id/status', medicalInfoController.updateStatus);
 // Rate doctor after appointment
 router.post('/appointment/:appointmentId/rate', medicalInfoController.rateDoctor);
 
+// Payment routes
+router.post('/create-payment-intent', medicalInfoController.createPaymentIntent);
+router.post('/confirm-payment', medicalInfoController.confirmPayment);
+
 // Error handling middleware
 router.use((err, req, res, next) => {
   console.error(err.stack);

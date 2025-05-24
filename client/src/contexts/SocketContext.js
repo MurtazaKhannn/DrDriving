@@ -31,13 +31,19 @@ export const SocketProvider = ({ children }) => {
         token,
         userType 
       },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
       forceNew: true,
-      timeout: 10000,
-      query: { userType }
+      timeout: 20000,
+      autoConnect: true,
+      query: { userType },
+      path: '/socket.io',
+      withCredentials: true,
+      upgrade: true
     });
 
     newSocket.on('connect', () => {

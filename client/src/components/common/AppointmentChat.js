@@ -74,15 +74,11 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
   // Set up socket listeners when chat is initialized
   useEffect(() => {
     if (!chat?._id || !socket) {
-      console.log('Socket or chat not initialized:', { chatId: chat?._id, socket: !!socket });
       return;
     }
 
-    console.log('Setting up socket listeners for chat:', chat._id, 'User type:', userType);
-    
     // Join chat room immediately if socket is connected
     if (socket.connected) {
-      console.log('Socket connected, joining chat room:', chat._id);
       joinChat(chat._id);
     }
 
@@ -91,19 +87,6 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
       const { rooms } = data;
       const isInChatRoom = rooms.includes(chat._id);
       setIsInRoom(isInChatRoom);
-      if (isInChatRoom) {
-        console.log('Successfully joined chat room:', {
-          chatId: chat._id,
-          userType,
-          rooms
-        });
-      } else {
-        console.warn('Failed to join chat room:', {
-          chatId: chat._id,
-          userType,
-          rooms
-        });
-      }
     };
 
     // Listen for new messages
@@ -111,7 +94,6 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
       const { message } = data;
       
       if (!message || !message.content) {
-        console.warn('Received invalid message:', message);
         return;
       }
 
@@ -127,6 +109,7 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
       // Ensure message has proper sender information
       const messageWithSender = {
         ...message,
+        _id: message._id,
         sender: message.sender?._id || message.sender,
         senderType: message.senderType || userType,
         content: message.content || message.message || '',
@@ -135,29 +118,26 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
 
       // Update messages state immediately using functional update
       setMessages(prevMessages => {
-        // Check if message already exists in state using a more precise comparison
-        const exists = prevMessages.some(m => {
-          // Check by ID first
-          if (m._id === messageWithSender._id) return true;
-          
-          // Check by content and sender if no ID match
-          if (m.content === messageWithSender.content && 
-              m.sender === messageWithSender.sender) {
-            // Only consider it a duplicate if timestamps are very close (within 1 second)
-            const timeDiff = Math.abs(new Date(m.timestamp) - new Date(messageWithSender.timestamp));
-            return timeDiff < 1000;
-          }
-          
-          return false;
-        });
-
+        // Check if message already exists in state
+        const exists = prevMessages.some(m => 
+          m._id === messageWithSender._id || 
+          (m.content === messageWithSender.content && 
+           m.sender === messageWithSender.sender && 
+           Math.abs(new Date(m.timestamp) - new Date(messageWithSender.timestamp)) < 1000)
+        );
+        
         if (exists) {
           return prevMessages;
         }
 
+        // Add new message and sort by timestamp
+        const updatedMessages = [...prevMessages, messageWithSender].sort((a, b) => 
+          new Date(a.timestamp) - new Date(b.timestamp)
+        );
+
         // Update last message timestamp
         setLastMessageTimestamp(messageWithSender.timestamp);
-        return [...prevMessages, messageWithSender];
+        return updatedMessages;
       });
 
       // Force scroll to bottom after state update
@@ -166,96 +146,61 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
 
     // Listen for message sent confirmation
     const handleMessageSent = (data) => {
-      console.log('Message sent confirmation received:', data, 'User type:', userType);
       const { message } = data;
       
       if (!message || !message.content) {
-        console.warn('Received invalid message confirmation:', message);
         return;
       }
 
-      // Update the message in state with the confirmed version using functional update
+      // Update the message in state with the confirmed version
       setMessages(prevMessages => {
+        // Replace temporary message with confirmed message
         const updatedMessages = prevMessages.map(msg => 
-          msg._id === message._id || msg._id === `temp_${message._id}` ? message : msg
-        );
-        console.log('Updated messages after confirmation:', updatedMessages);
+          msg._id === message._id || 
+          msg._id === `temp_${message._id}` || 
+          (msg.content === message.content && 
+           msg.sender === message.sender && 
+           Math.abs(new Date(msg.timestamp) - new Date(message.timestamp)) < 1000)
+            ? message 
+            : msg
+        ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        
         return updatedMessages;
       });
     };
 
     // Listen for connection status
     const handleConnect = () => {
-      console.log('Socket connected, joining chat room:', chat._id, 'User type:', userType);
       joinChat(chat._id);
     };
 
     // Listen for disconnection
     const handleDisconnect = (reason) => {
-      console.log('Socket disconnected:', reason, 'User type:', userType);
       setIsInRoom(false);
       if (reason !== 'io client disconnect') {
         socket.connect();
       }
     };
 
-    // Listen for errors
-    const handleError = (error) => {
-      console.error('Socket error:', error, 'User type:', userType);
-    };
-
-    // Listen for user joined
-    const handleUserJoined = (data) => {
-      console.log('User joined chat:', data, 'User type:', userType);
-    };
-
-    // Listen for user left
-    const handleUserLeft = (data) => {
-      console.log('User left chat:', data, 'User type:', userType);
-    };
-
-    // Listen for user disconnected
-    const handleUserDisconnected = (data) => {
-      console.log('User disconnected:', data, 'User type:', userType);
-    };
-
     // Set up all socket listeners
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
-    socket.on('error', handleError);
     socket.on('new_message', handleNewMessage);
     socket.on('message_sent', handleMessageSent);
-    socket.on('user_joined', handleUserJoined);
-    socket.on('user_left', handleUserLeft);
-    socket.on('user_disconnected', handleUserDisconnected);
     socket.on('room_joined', handleRoomJoined);
-
-    // Add a reconnection handler
-    const handleReconnect = () => {
-      console.log('Socket reconnected, rejoining chat room:', chat._id, 'User type:', userType);
-      joinChat(chat._id);
-    };
-
-    socket.on('reconnect', handleReconnect);
 
     // Clean up listeners
     return () => {
-      console.log('Cleaning up socket listeners for chat:', chat._id, 'User type:', userType);
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
-      socket.off('error', handleError);
       socket.off('new_message', handleNewMessage);
       socket.off('message_sent', handleMessageSent);
-      socket.off('user_joined', handleUserJoined);
-      socket.off('user_left', handleUserLeft);
-      socket.off('user_disconnected', handleUserDisconnected);
-      socket.off('reconnect', handleReconnect);
       socket.off('room_joined', handleRoomJoined);
       leaveChat(chat._id);
       pendingMessagesRef.current.clear();
       setIsInRoom(false);
     };
-  }, [chat?._id, socket, joinChat, leaveChat, userType, isInRoom]);
+  }, [chat?._id, socket, joinChat, leaveChat, currentUser?._id]); // Remove userType and isInRoom from dependencies
 
   // Add a new effect to handle chat initialization
   useEffect(() => {
@@ -266,7 +211,6 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
 
   // Add a new effect to handle message updates
   useEffect(() => {
-    console.log('Messages updated:', messages);
     scrollToBottom();
   }, [messages]);
 
@@ -287,7 +231,6 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
       }
 
       if (response.data) {
-        console.log('Chat initialized:', response.data);
         setChat(response.data);
         setMessages(response.data.messages || []);
         
@@ -296,12 +239,10 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
           ? response.data.doctorId 
           : response.data.patientId;
         
-        console.log('Setting current user:', currentUserData);
         setCurrentUser(currentUserData);
 
         // Join chat room immediately after initialization
         if (socket && socket.connected) {
-          console.log('Joining chat room after initialization:', response.data._id);
           joinChat(response.data._id);
         }
       }
@@ -351,30 +292,29 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    
-    if (!newMessage.trim() || isAppointmentOver || !chat?._id || !currentUser?._id) return;
+    if (!newMessage.trim() || !chat?._id || !isWithinAppointmentTime) return;
 
     const messageContent = newMessage.trim();
     setNewMessage('');
-
-    // Create temporary message with a unique ID
     const tempId = `temp_${Date.now()}`;
+
+    // Add temporary message to UI
     const tempMessage = {
       _id: tempId,
       content: messageContent,
       sender: currentUser._id,
       senderType: userType,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      isRead: false
     };
 
-    console.log('Sending message:', tempMessage, 'User type:', userType);
-
-    // Add to pending messages
-    pendingMessagesRef.current.add(`${tempId}_${tempMessage.timestamp}`);
-
-    // Update local state immediately with temporary message
-    setMessages(prev => [...prev, tempMessage]);
-    scrollToBottom();
+    // Update messages state with temporary message
+    setMessages(prev => {
+      const filtered = prev.filter(m => !(m._id === tempId));
+      return [...filtered, tempMessage].sort((a, b) => 
+        new Date(a.timestamp) - new Date(b.timestamp)
+      );
+    });
 
     try {
       // Save to database
@@ -384,42 +324,25 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
 
       const response = await axios.post(endpoint, {
         content: messageContent,
-        sender: currentUser._id,
-        senderType: userType,
         appointmentId: appointmentId,
-        timestamp: tempMessage.timestamp
-      });
-
-      console.log('Message saved to database:', response.data, 'User type:', userType);
-
-      // Ensure response data has all required fields
-      const savedMessage = {
-        ...response.data,
-        content: response.data.content || messageContent,
         sender: currentUser._id,
-        senderType: userType,
-        timestamp: response.data.timestamp || tempMessage.timestamp
-      };
-
-      // Remove the temporary message
-      setMessages(prev => prev.filter(m => m._id !== tempId));
+        senderType: userType
+      });
 
       // Send through socket
       if (socket && socket.connected) {
-        console.log('Sending message through socket:', savedMessage);
+        // Add message to pending messages before sending
+        pendingMessagesRef.current.add(`${response.data._id}_${response.data.timestamp}`);
         socket.emit('send_message', {
           chatId: chat._id,
-          message: savedMessage
+          message: response.data
         });
-      } else {
-        console.warn('Socket not connected, message will be sent when connection is restored');
-        // The message will be sent when socket reconnects
       }
 
     } catch (error) {
-      console.error('Error sending message:', error, 'User type:', userType);
+      console.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
-      // Remove only the temporary message on error
+      // Remove temporary message on error
       setMessages(prev => prev.filter(m => m._id !== tempId));
     }
   };
@@ -491,7 +414,6 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
         });
 
         if (uniqueNewMessages.length > 0) {
-          console.log('Fetched new messages:', uniqueNewMessages.length);
           return [...prevMessages, ...uniqueNewMessages];
         }
         return prevMessages;
@@ -513,8 +435,8 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
     // Initial fetch
     fetchMessages();
 
-    // Set up periodic refresh every 3 seconds
-    refreshIntervalRef.current = setInterval(fetchMessages, 3000);
+    // Set up periodic refresh every 10 seconds instead of 3
+    refreshIntervalRef.current = setInterval(fetchMessages, 10000);
 
     return () => {
       if (refreshIntervalRef.current) {
@@ -578,14 +500,21 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
       <Box flex="1" overflowY="auto" mb={4}>
         <VStack spacing={4} align="stretch">
           {messages.map((message, index) => {
+            // Determine if message is from current user based on sender ID
             const isSentByMe = message.sender === currentUser?._id;
             const messageContent = message.content || message.message || '';
+            
+            // Skip rendering if this is a duplicate message
+            if (index > 0 && messages[index - 1]._id === message._id) {
+              return null;
+            }
             
             return (
               <Flex
                 key={`${message._id}_${message.timestamp}_${index}`}
                 justify={isSentByMe ? 'flex-end' : 'flex-start'}
                 width="100%"
+                mb={2}
               >
                 <Box
                   maxW="70%"
@@ -594,6 +523,7 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
                   borderRadius="lg"
                   ml={isSentByMe ? 'auto' : '0'}
                   mr={isSentByMe ? '0' : 'auto'}
+                  position="relative"
                 >
                   <Text fontSize="sm" color="gray.500" mb={1}>
                     {formatTime(message.timestamp)}

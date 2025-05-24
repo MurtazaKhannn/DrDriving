@@ -13,9 +13,18 @@ import {
   Card,
   CardBody,
   Heading,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
 } from '@chakra-ui/react';
 import axios from '../../utils/axios';
 import { useNavigate } from 'react-router-dom';
+import StripeWrapper from '../common/StripeWrapper';
+import PaymentForm from '../common/PaymentForm';
 
 const AppointmentForm = () => {
   const [doctors, setDoctors] = useState([]);
@@ -30,6 +39,8 @@ const AppointmentForm = () => {
     symptoms: '',
     notes: ''
   });
+  const [createdAppointment, setCreatedAppointment] = useState(null);
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -147,15 +158,16 @@ const AppointmentForm = () => {
     setLoading(true);
 
     try {
-      await axios.post('/medical-info', formData);
+      const response = await axios.post('/medical-info', formData);
+      setCreatedAppointment(response.data);
+      onOpen(); // Open payment modal
       toast({
         title: 'Success',
-        description: 'Appointment request sent successfully',
+        description: 'Appointment created. Please complete the payment.',
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
-      navigate('/patient/appointments');
     } catch (error) {
       toast({
         title: 'Error',
@@ -169,101 +181,127 @@ const AppointmentForm = () => {
     }
   };
 
+  const handlePaymentSuccess = () => {
+    onClose();
+    navigate('/patient/appointments');
+  };
+
   return (
-    <Card>
-      <CardBody>
-        <VStack spacing={4} align="stretch">
-          <Heading size="md">Book an Appointment</Heading>
-          
-          <form onSubmit={handleSubmit}>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Select Doctor</FormLabel>
-                <Select
-                  value={formData.doctorId}
-                  onChange={handleDoctorChange}
-                  placeholder="Choose a doctor"
+    <>
+      <Card>
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <Heading size="md">Book an Appointment</Heading>
+            
+            <form onSubmit={handleSubmit}>
+              <VStack spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel>Select Doctor</FormLabel>
+                  <Select
+                    value={formData.doctorId}
+                    onChange={handleDoctorChange}
+                    placeholder="Choose a doctor"
+                  >
+                    {doctors.map(doctor => (
+                      <option key={doctor._id} value={doctor._id}>
+                        Dr. {doctor.name} - {doctor.specialty}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel>Date</FormLabel>
+                  <Input
+                    type="date"
+                    value={formData.date}
+                    onChange={handleDateChange}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel>Time</FormLabel>
+                  <Select
+                    value={formData.time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                    placeholder="Select time"
+                    isDisabled={!formData.date || availableTimeSlots.length === 0}
+                  >
+                    {availableTimeSlots.map(slot => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </Select>
+                  {formData.date && availableTimeSlots.length === 0 && (
+                    <Text color="red.500" fontSize="sm">
+                      No available time slots for this date
+                    </Text>
+                  )}
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel>Reason for Visit</FormLabel>
+                  <Textarea
+                    value={formData.reason}
+                    onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
+                    placeholder="Please describe your reason for the appointment"
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel>Symptoms</FormLabel>
+                  <Textarea
+                    value={formData.symptoms}
+                    onChange={(e) => setFormData(prev => ({ ...prev, symptoms: e.target.value }))}
+                    placeholder="Please describe your symptoms"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Additional Notes</FormLabel>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Any additional information you'd like to share"
+                  />
+                </FormControl>
+
+                <Button
+                  type="submit"
+                  colorScheme="blue"
+                  width="full"
+                  isLoading={loading}
+                  isDisabled={!formData.doctorId || !formData.date || !formData.time || !formData.reason || !formData.symptoms}
                 >
-                  {doctors.map(doctor => (
-                    <option key={doctor._id} value={doctor._id}>
-                      Dr. {doctor.name} - {doctor.specialty}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
+                  Book Appointment
+                </Button>
+              </VStack>
+            </form>
+          </VStack>
+        </CardBody>
+      </Card>
 
-              <FormControl isRequired>
-                <FormLabel>Date</FormLabel>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={handleDateChange}
-                  min={new Date().toISOString().split('T')[0]}
+      <Modal isOpen={isOpen} onClose={onClose} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Complete Payment</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {createdAppointment && (
+              <StripeWrapper>
+                <PaymentForm
+                  appointmentId={createdAppointment._id}
+                  amount={50} // You can set this based on doctor's fee or other criteria
+                  onPaymentSuccess={handlePaymentSuccess}
                 />
-              </FormControl>
-
-              <FormControl isRequired>
-                <FormLabel>Time</FormLabel>
-                <Select
-                  value={formData.time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                  placeholder="Select time"
-                  isDisabled={!formData.date || availableTimeSlots.length === 0}
-                >
-                  {availableTimeSlots.map(slot => (
-                    <option key={slot} value={slot}>
-                      {slot}
-                    </option>
-                  ))}
-                </Select>
-                {formData.date && availableTimeSlots.length === 0 && (
-                  <Text color="red.500" fontSize="sm">
-                    No available time slots for this date
-                  </Text>
-                )}
-              </FormControl>
-
-              <FormControl isRequired>
-                <FormLabel>Reason for Visit</FormLabel>
-                <Textarea
-                  value={formData.reason}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                  placeholder="Please describe your reason for the appointment"
-                />
-              </FormControl>
-
-              <FormControl isRequired>
-                <FormLabel>Symptoms</FormLabel>
-                <Textarea
-                  value={formData.symptoms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, symptoms: e.target.value }))}
-                  placeholder="Please describe your symptoms"
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Additional Notes</FormLabel>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Any additional information you'd like to share"
-                />
-              </FormControl>
-
-              <Button
-                type="submit"
-                colorScheme="blue"
-                width="full"
-                isLoading={loading}
-                isDisabled={!formData.doctorId || !formData.date || !formData.time || !formData.reason || !formData.symptoms}
-              >
-                Book Appointment
-              </Button>
-            </VStack>
-          </form>
-        </VStack>
-      </CardBody>
-    </Card>
+              </StripeWrapper>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </>
   );
 };
 

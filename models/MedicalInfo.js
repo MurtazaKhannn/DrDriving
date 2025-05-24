@@ -38,9 +38,30 @@ const medicalInfoSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  isPaymentDone: {
-    type: Boolean,
-    default: false
+  // Payment related fields
+  payment: {
+    amount: {
+      type: Number,
+      required: true,
+      default: 0
+    },
+    currency: {
+      type: String,
+      required: true,
+      default: 'usd'
+    },
+    stripePaymentId: {
+      type: String
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'completed', 'failed'],
+      default: 'pending'
+    },
+    isPaymentDone: {
+      type: Boolean,
+      default: false
+    }
   },
   hasRated: {
     type: Boolean,

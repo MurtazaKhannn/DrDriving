@@ -1,6 +1,8 @@
 const MedicalInfo = require('../models/MedicalInfo');
 const Doctor = require('../models/Doctor');
 const Patient = require('../models/Patient');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { sendPatientReceipt, sendDoctorNotification } = require('../utils/emailService');
 
 // Get all doctors
 exports.getDoctors = async (req, res) => {
@@ -80,7 +82,13 @@ exports.createMedicalInfo = async (req, res) => {
       reason,
       symptoms,
       notes,
-      status: 'pending'
+      status: 'pending',
+      payment: {
+        amount: doctor.consultationFee || 100, // Default to $100 if not set
+        currency: 'usd',
+        status: 'pending',
+        isPaymentDone: false
+      }
     });
 
     await medicalInfo.save();
@@ -289,5 +297,98 @@ exports.rateDoctor = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+};
+
+// Create payment intent
+exports.createPaymentIntent = async (req, res) => {
+  try {
+    console.log('Creating payment intent for request:', req.body);
+    const { appointmentId } = req.body;
+    
+    if (!appointmentId) {
+      console.error('No appointmentId provided');
+      return res.status(400).json({ error: 'Appointment ID is required' });
+    }
+
+    const appointment = await MedicalInfo.findById(appointmentId);
+    console.log('Found appointment:', appointment);
+
+    if (!appointment) {
+      console.error('Appointment not found:', appointmentId);
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    if (appointment.patientId.toString() !== req.user._id.toString()) {
+      console.error('Unauthorized access attempt:', {
+        appointmentPatientId: appointment.patientId,
+        requestUserId: req.user._id
+      });
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    console.log('Creating Stripe payment intent for amount:', appointment.payment.amount);
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: appointment.payment.amount * 100, // Convert to cents
+      currency: appointment.payment.currency,
+      metadata: {
+        appointmentId: appointment._id.toString()
+      }
+    });
+
+    console.log('Payment intent created:', paymentIntent.id);
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Confirm payment
+exports.confirmPayment = async (req, res) => {
+  try {
+    const { appointmentId, paymentIntentId } = req.body;
+
+    const appointment = await MedicalInfo.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Update payment status
+    appointment.payment.status = 'completed';
+    appointment.payment.paymentId = paymentIntentId;
+    appointment.payment.isPaymentDone = true;
+    await appointment.save();
+
+    // Get doctor details
+    const doctor = await Doctor.findById(appointment.doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+
+    // Prepare appointment details for email
+    const appointmentDetails = {
+      patientName: appointment.patientName,
+      doctorName: doctor.name,
+      date: appointment.appointmentDate,
+      time: appointment.appointmentTime,
+      amount: appointment.payment.amount,
+      paymentId: paymentIntentId
+    };
+
+    // Send emails
+    await sendPatientReceipt(appointment.email, appointmentDetails);
+    await sendDoctorNotification(doctor.email, appointmentDetails);
+
+    res.json({ 
+      message: 'Payment confirmed successfully',
+      appointment: {
+        ...appointment.toObject(),
+        doctorName: doctor.name
+      }
+    });
+  } catch (error) {
+    console.error('Error confirming payment:', error);
+    res.status(500).json({ message: 'Error confirming payment' });
   }
 }; 

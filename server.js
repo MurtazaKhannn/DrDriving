@@ -23,9 +23,16 @@ const io = socketIo(server, {
     credentials: true,
     allowedHeaders: ["Authorization"]
   },
-  transports: ['websocket', 'polling'],
-  pingTimeout: 60000,
-  pingInterval: 25000
+  transports: ['polling', 'websocket'],
+  pingTimeout: 120000,
+  pingInterval: 25000,
+  connectTimeout: 45000,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  path: '/socket.io',
+  allowEIO3: true,
+  upgrade: true
 });
 
 // Middleware

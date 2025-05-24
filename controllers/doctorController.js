@@ -227,24 +227,37 @@ exports.sendMessage = async (req, res) => {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
-    // Add new message
-    chat.messages.push({
+    // Create new message object
+    const newMessage = {
       sender: doctorId,
       senderType: 'doctor',
       content,
-      timestamp: new Date()
-    });
+      timestamp: new Date(),
+      isRead: false
+    };
 
+    // Add new message to the messages array
+    chat.messages.push(newMessage);
     chat.lastMessage = new Date();
+
+    // Save the chat with the new message
     await chat.save();
 
-    // Populate the updated chat with sender information
+    // Get the updated chat with populated sender information
     const updatedChat = await Chat.findById(chat._id)
       .populate('patientId', 'name')
       .populate('doctorId', 'name specialty')
-      .populate('messages.sender', 'name');
+      .populate({
+        path: 'messages.sender',
+        select: 'name',
+        model: function() {
+          return this.senderType === 'doctor' ? 'Doctor' : 'Patient';
+        }
+      });
 
-    res.status(200).json(updatedChat);
+    // Return only the new message with populated sender information
+    const populatedMessage = updatedChat.messages[updatedChat.messages.length - 1];
+    res.status(200).json(populatedMessage);
   } catch (error) {
     console.error('Error in sendMessage:', error);
     res.status(400).json({ error: error.message });

@@ -95,11 +95,21 @@ exports.sendMessage = async (req, res) => {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
+    // Check if this is a duplicate message
+    const lastMessage = chat.messages[chat.messages.length - 1];
+    if (lastMessage && 
+        lastMessage.content === content && 
+        lastMessage.sender.toString() === senderId.toString() &&
+        new Date() - new Date(lastMessage.timestamp) < 5000) { // Within 5 seconds
+      return res.status(400).json({ error: 'Duplicate message' });
+    }
+
     const message = {
       content,
       sender: senderId,
       senderType,
-      timestamp: new Date()
+      timestamp: new Date(),
+      isRead: false
     };
 
     chat.messages.push(message);
@@ -108,6 +118,7 @@ exports.sendMessage = async (req, res) => {
     // Populate sender details
     const populatedMessage = {
       ...message,
+      _id: message._id,
       sender: senderType === 'doctor' 
         ? await Doctor.findById(senderId).select('name email')
         : await Patient.findById(senderId).select('name email')

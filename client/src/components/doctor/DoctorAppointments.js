@@ -20,6 +20,8 @@ import {
   ModalCloseButton,
   useDisclosure,
   Flex,
+  Alert,
+  AlertIcon,
 } from '@chakra-ui/react';
 import axios from '../../utils/axios';
 import AppointmentChat from '../common/AppointmentChat';
@@ -89,13 +91,26 @@ const DoctorAppointments = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending':
-        return 'yellow';
       case 'confirmed':
         return 'green';
+      case 'pending':
+        return 'yellow';
+      case 'cancelled':
+        return 'red';
       case 'completed':
         return 'blue';
-      case 'cancelled':
+      default:
+        return 'gray';
+    }
+  };
+
+  const getPaymentStatusColor = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'green';
+      case 'pending':
+        return 'yellow';
+      case 'failed':
         return 'red';
       default:
         return 'gray';
@@ -132,9 +147,14 @@ const DoctorAppointments = () => {
             <Card key={appointment._id}>
               <CardBody>
                 <VStack align="stretch" spacing={2}>
-                  <Box>
-                    <Text fontWeight="bold">Patient: {appointment.patientId.name}</Text>
-                  </Box>
+                  <Flex justify="space-between" align="center">
+                    <Box>
+                      <Text fontWeight="bold">Patient: {appointment.patientId.name}</Text>
+                    </Box>
+                    <Badge colorScheme={getStatusColor(appointment.status)}>
+                      {appointment.status.toUpperCase()}
+                    </Badge>
+                  </Flex>
                   
                   <Box>
                     <Text>
@@ -151,6 +171,35 @@ const DoctorAppointments = () => {
                   <Box>
                     <Text fontWeight="bold">Symptoms:</Text>
                     <Text>{appointment.symptoms}</Text>
+                  </Box>
+
+                  {/* Payment Information */}
+                  <Box mt={2}>
+                    <Text fontWeight="bold">Payment Status:</Text>
+                    <Flex justify="space-between" align="center" mt={1}>
+                      <Badge colorScheme={getPaymentStatusColor(appointment.payment?.status)}>
+                        {appointment.payment?.status?.toUpperCase() || 'PENDING'}
+                      </Badge>
+                      <Text fontWeight="bold">
+                        ${appointment.payment?.amount || 0}
+                      </Text>
+                    </Flex>
+                    {appointment.payment?.status === 'completed' ? (
+                      <Alert status="success" mt={2} size="sm">
+                        <AlertIcon />
+                        Payment completed successfully
+                      </Alert>
+                    ) : appointment.payment?.status === 'failed' ? (
+                      <Alert status="error" mt={2} size="sm">
+                        <AlertIcon />
+                        Payment failed
+                      </Alert>
+                    ) : (
+                      <Alert status="warning" mt={2} size="sm">
+                        <AlertIcon />
+                        Payment pending
+                      </Alert>
+                    )}
                   </Box>
                   
                   {appointment.notes && (
