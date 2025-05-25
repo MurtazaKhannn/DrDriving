@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChakraProvider, Box } from '@chakra-ui/react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import theme from './theme';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
