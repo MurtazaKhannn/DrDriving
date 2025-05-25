@@ -26,6 +26,7 @@ A full-stack healthcare platform built with the MERN stack (MongoDB, Express.js,
 - Medical history tracking
 - Doctor rating and reviews
 - Nearby hospital finder
+- AI-powered symptom analysis and doctor recommendations
 
 ### 4. Real-time Communication
 - Socket.IO-based chat system
@@ -50,6 +51,19 @@ A full-stack healthcare platform built with the MERN stack (MongoDB, Express.js,
   - Emergency services
   - Operating hours
 
+### 7. AI-Powered Healthcare Assistant
+- Multilingual chatbot support
+- Symptom-based doctor recommendations
+- Natural language processing for medical queries
+- Intelligent doctor matching based on:
+  - Patient symptoms
+  - Doctor specialization
+  - Doctor experience
+  - Patient history
+- Real-time language detection and response
+- Contextual medical advice
+- Appointment scheduling assistance
+
 ## 🛠️ Technology Stack
 
 ### Frontend
@@ -59,6 +73,7 @@ A full-stack healthcare platform built with the MERN stack (MongoDB, Express.js,
 - Socket.IO client for real-time features
 - Axios for API calls
 - WebRTC for video calls
+- Natural Language Processing for chatbot
 
 ### Backend
 - Node.js with Express
@@ -67,6 +82,8 @@ A full-stack healthcare platform built with the MERN stack (MongoDB, Express.js,
 - JWT for authentication
 - bcrypt for password hashing
 - CORS for cross-origin requests
+- AI/ML models for symptom analysis
+- Language detection and translation services
 
 ## 📦 Installation
 
