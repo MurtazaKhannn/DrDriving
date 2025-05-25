@@ -69,6 +69,25 @@ const Profile = () => {
           [field]: value
         }
       }));
+    } else if (name === 'qualifications') {
+      // Handle qualifications as an array of objects
+      try {
+        const quals = value.split(',').map(qual => ({
+          degree: qual.trim(),
+          institution: 'Not specified',
+          year: new Date().getFullYear()
+        }));
+        setFormData(prev => ({
+          ...prev,
+          qualifications: quals
+        }));
+      } catch (error) {
+        console.error('Error parsing qualifications:', error);
+        setFormData(prev => ({
+          ...prev,
+          qualifications: value
+        }));
+      }
     } else {
       setFormData(prev => ({
         ...prev,
@@ -84,20 +103,39 @@ const Profile = () => {
     try {
       const endpoint = userType === 'doctor' ? '/doctor/profile' : '/profile';
       
-      // Only include allowed fields
-      const allowedFields = ['name', 'phone', 'age', 'gender', 'location'];
+      // Define allowed fields based on user type
+      const allowedFields = userType === 'doctor' 
+        ? ['name', 'phone', 'location', 'availability', 'isAvailable', 'specialty', 'experience', 'qualifications']
+        : ['name', 'phone', 'age', 'gender', 'location'];
+
+      // Create a new object with only allowed fields
       const formattedData = allowedFields.reduce((acc, field) => {
-        if (field === 'location') {
-          acc[field] = {
-            city: formData.location?.city || '',
-            state: formData.location?.state || '',
-            country: formData.location?.country || ''
-          };
-        } else {
+        if (formData[field] !== undefined) {
           acc[field] = formData[field];
         }
         return acc;
       }, {});
+      
+      if (userType === 'doctor') {
+        // Handle qualifications
+        if (formattedData.qualifications) {
+          if (Array.isArray(formattedData.qualifications)) {
+            formattedData.qualifications = formattedData.qualifications;
+          } else if (typeof formattedData.qualifications === 'string') {
+            // Convert string to array of objects
+            formattedData.qualifications = formattedData.qualifications.split(',').map(qual => ({
+              degree: qual.trim(),
+              institution: 'Not specified',
+              year: new Date().getFullYear()
+            }));
+          }
+        }
+
+        // Handle location
+        if (formattedData.location) {
+          formattedData.location = formattedData.location;
+        }
+      }
 
       console.log('Sending update with data:', formattedData);
       const response = await axios.put(endpoint, formattedData);
@@ -299,9 +337,12 @@ const Profile = () => {
                             <FormLabel>Qualifications</FormLabel>
                             <Input
                               name="qualifications"
-                              value={formData.qualifications || ''}
+                              value={Array.isArray(formData.qualifications) 
+                                ? formData.qualifications.map(q => q.degree).join(', ')
+                                : formData.qualifications || ''}
                               onChange={handleChange}
                               isDisabled={!editing}
+                              placeholder="Enter qualifications separated by commas"
                             />
                           </FormControl>
                         </GridItem>

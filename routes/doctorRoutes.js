@@ -10,7 +10,7 @@ router.post('/login', doctorController.login);
 // Protected routes
 router.use(auth);
 router.get('/profile', doctorController.getProfile);
-router.patch('/profile', doctorController.updateProfile);
+router.put('/profile', doctorController.updateProfile);
 
 // Chat routes
 router.post('/chats', doctorController.createChat);

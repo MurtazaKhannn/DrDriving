@@ -122,19 +122,59 @@ exports.updateProfile = async (req, res) => {
   }
 
   const updates = Object.keys(req.body);
-  const allowedUpdates = ['name', 'phone', 'location', 'availability', 'isAvailable'];
+  const allowedUpdates = ['name', 'phone', 'location', 'availability', 'isAvailable', 'specialty', 'experience', 'qualifications'];
   const isValidOperation = updates.every(update => allowedUpdates.includes(update));
 
   if (!isValidOperation) {
-    return res.status(400).json({ error: 'Invalid updates' });
+    return res.status(400).json({ 
+      error: 'Invalid updates',
+      message: 'Only the following fields can be updated: ' + allowedUpdates.join(', ')
+    });
   }
 
   try {
-    updates.forEach(update => req.user[update] = req.body[update]);
-    await req.user.save();
-    res.json(req.user);
+    // Create an update object
+    const updateData = {};
+
+    // Handle each field
+    for (const field of updates) {
+      if (field === 'qualifications') {
+        if (Array.isArray(req.body.qualifications)) {
+          updateData.qualifications = req.body.qualifications;
+        } else if (typeof req.body.qualifications === 'string') {
+          updateData.qualifications = req.body.qualifications.split(',').map(qual => ({
+            degree: qual.trim(),
+            institution: 'Not specified',
+            year: new Date().getFullYear()
+          }));
+        }
+      } else if (field === 'location') {
+        if (typeof req.body.location === 'object') {
+          updateData.location = req.body.location;
+        }
+      } else {
+        updateData[field] = req.body[field];
+      }
+    }
+
+    // Update the doctor document
+    const doctor = await Doctor.findByIdAndUpdate(
+      req.user._id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-passwordHash');
+
+    if (!doctor) {
+      return res.status(404).json({ error: 'Doctor not found' });
+    }
+
+    res.json(doctor);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error('Error updating profile:', error);
+    res.status(400).json({ 
+      error: error.message,
+      details: error.errors // Include validation errors if any
+    });
   }
 };
 
