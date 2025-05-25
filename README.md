@@ -2,6 +2,7 @@
 
 A full-stack healthcare platform built with the MERN stack (MongoDB, Express.js, React, Node.js) that connects patients with doctors, facilitates appointments, and provides real-time communication.
 ### Figma Design Link : https://www.figma.com/proto/r3INEPRVf9FLyEl7gyBTDD/Untitled?page-id=0%3A1&node-id=1-2&viewport=272%2C189%2C0.25&t=L0G0TTykdVozCh82-1&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=1%3A2
+### Word Doc Link : ### Word Doc Link : https://docs.google.com/document/d/1WwIBtKd0YRJEAOouTTFlqVCXwVfzLDI8/edit?usp=drive_link&ouid=112837483818695536948&rtpof=true&sd=true
 
 ## 🌟 Features
 
