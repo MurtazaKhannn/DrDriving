@@ -70,7 +70,20 @@ const Login = () => {
       }, 1000);
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'An error occurred';
+      let errorMessage = 'An error occurred during login';
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        errorMessage = error.response.data?.error || error.response.data?.message || 'Invalid credentials';
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = 'No response from server. Please check your internet connection.';
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        errorMessage = error.message;
+      }
+
       toast({
         title: 'Login Failed',
         description: errorMessage,
