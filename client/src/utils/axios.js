@@ -23,11 +23,13 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only handle 401 errors that are not from login attempts
+    if (error.response?.status === 401 && !error.config.url.includes('/login')) {
       localStorage.removeItem('token');
       localStorage.removeItem('userType');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Use hash-based navigation
+      window.location.href = '/#/login';
     }
     return Promise.reject(error);
   }
