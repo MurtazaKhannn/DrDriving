@@ -10,39 +10,33 @@ A full-stack healthcare platform built with the MERN stack (MongoDB, Express.js,
 - Protected routes based on user type
 - Secure password hashing with bcrypt
 
-### 2. Doctor Features
-- Profile management with qualifications and experience
-- Appointment scheduling and management
-- Real-time chat with patients
-- Video consultation capability
-- Rating and review system
-- Availability management
+### 2. Doctor & Patient Features 
+- Profile management for doctors (qualifications, experience, availability) 
+- Doctor search with filters for patients 
+- Appointment scheduling, booking, and management 
+- Real-time chat and video consultations between doctors and patients 
+- Medical history tracking for patients 
+- Rating and review system for both parties 
+- Nearby hospital finder powered by AI 
 
-### 3. Patient Features
-- Doctor search and filtering
-- Appointment booking
-- Real-time chat with doctors
-- Video consultation
-- Medical history tracking
-- Doctor rating and reviews
-- Nearby hospital finder
-- AI-powered symptom analysis and doctor recommendations
-
-### 4. Real-time Communication
-- Socket.IO-based chat system
-- Real-time video consultations
+### 3. Real-time Chat Features : https://www.loom.com/share/f088898969a34fc1b87c323ee44aa788?sid=6223bc71-3363-404e-831c-43b7c722914c
+- Socket.IO-based real-time chat
 - Typing indicators
 - Message read status
 - Chat history preservation
 
-### 5. Appointment Management
+### 4. Real-time Video Consultation : https://www.loom.com/share/72ec5b420aca40fc92304757e7ba4ec7
+- Secure video calls between doctors and patients
+- Seamless integration with appointment system
+
+### 5. Appointment Management : https://www.loom.com/share/bb9482d727ea4047a7006bb2241dc39c?sid=a235d51f-4010-4a5e-8705-d7f26aa6d34f
 - Appointment scheduling
 - Status tracking (pending, confirmed, completed, cancelled)
 - Payment tracking
 - Appointment reminders
 - Chat availability during appointment window
 
-### 6. Location Services
+### 6. Location Services : https://www.loom.com/share/9ac09c7556414546be1aa614f402496e?sid=0f337247-c016-4576-bfb2-3ea80661d57a
 - Find nearby hospitals
 - Distance calculation using Haversine formula
 - Hospital details including:
@@ -51,7 +45,7 @@ A full-stack healthcare platform built with the MERN stack (MongoDB, Express.js,
   - Emergency services
   - Operating hours
 
-### 7. AI-Powered Healthcare Assistant
+### 7. AI-Powered Healthcare Assistant : https://www.loom.com/share/9ac09c7556414546be1aa614f402496e?sid=0f337247-c016-4576-bfb2-3ea80661d57a
 - Multilingual chatbot support
 - Symptom-based doctor recommendations
 - Natural language processing for medical queries
