@@ -11,9 +11,23 @@ import {
   Divider,
   Alert,
   AlertIcon,
+  IconButton,
+  Icon,
 } from '@chakra-ui/react';
+import { PhoneIcon } from '@chakra-ui/icons';
 import axios from '../../utils/axios';
 import { useSocket } from '../../contexts/SocketContext';
+import VideoCall from './VideoCall';
+
+// Custom Video Camera Icon
+const VideoCameraIcon = (props) => (
+  <Icon viewBox="0 0 24 24" {...props}>
+    <path
+      fill="currentColor"
+      d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"
+    />
+  </Icon>
+);
 
 const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, appointmentDate }) => {
   const [messages, setMessages] = useState([]);
@@ -36,6 +50,8 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
   const pendingMessagesRef = useRef(new Set());
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
   const refreshIntervalRef = useRef(null);
+  const [isVideoCall, setIsVideoCall] = useState(false);
+  const [userName, setUserName] = useState('');
 
   const checkAppointmentTime = () => {
     const now = new Date();
@@ -445,6 +461,20 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
     };
   }, [chat?._id, isWithinAppointmentTime]);
 
+  // Add this useEffect to fetch user name
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const endpoint = userType === 'doctor' ? `/doctors/${doctorId}` : `/patients/${patientId}`;
+        const response = await axios.get(endpoint);
+        setUserName(response.data.name);
+      } catch (error) {
+        console.error('Error fetching user name:', error);
+      }
+    };
+    fetchUserName();
+  }, [userType, doctorId, patientId]);
+
   if (loading) {
     return <Text>Loading chat...</Text>;
   }
@@ -477,10 +507,22 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
       flexDirection="column"
     >
       <Box mb={4}>
-        <Text fontWeight="bold">Appointment Chat</Text>
-        <Text fontSize="sm" color="gray.500">
-          {new Date(appointmentDate).toLocaleDateString()} at {appointmentTime}
-        </Text>
+        <Flex justify="space-between" align="center">
+          <Box>
+            <Text fontWeight="bold">Appointment Chat</Text>
+            <Text fontSize="sm" color="gray.500">
+              {new Date(appointmentDate).toLocaleDateString()} at {appointmentTime}
+            </Text>
+          </Box>
+          {isWithinAppointmentTime && !isAppointmentOver && (
+            <IconButton
+              icon={<VideoCameraIcon />}
+              colorScheme="blue"
+              onClick={() => setIsVideoCall(true)}
+              aria-label="Start video call"
+            />
+          )}
+        </Flex>
         {!isWithinAppointmentTime && !isAppointmentOver && (
           <Alert status="info" mt={2}>
             <AlertIcon />
@@ -579,6 +621,15 @@ const AppointmentChat = ({ appointmentId, doctorId, patientId, appointmentTime, 
           </Button>
         </Flex>
       </form>
+
+      {/* Add VideoCall component */}
+      <VideoCall
+        isOpen={isVideoCall}
+        onClose={() => setIsVideoCall(false)}
+        appointmentId={appointmentId}
+        userType={userType}
+        userName={userName}
+      />
     </Box>
   );
 };
