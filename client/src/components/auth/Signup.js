@@ -596,19 +596,19 @@ const Signup = () => {
                         </GridItem>
 
                         <GridItem colSpan={2}>
-                          <FormControl isRequired>
-                            <FormLabel>Available Days</FormLabel>
-                            <HStack spacing={4} wrap="wrap">
-                              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                          <FormControl as="fieldset">
+                            <FormLabel as="legend">Days Available</FormLabel>
+                            <VStack align="start">
+                              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
                                 <Checkbox
                                   key={day}
-                                  isChecked={formData.availability?.daysAvailable?.includes(day)}
+                                  isChecked={formData.availability?.daysAvailable.includes(day)}
                                   onChange={(e) => handleAvailabilityChange(day, e.target.checked)}
                                 >
                                   {day}
                                 </Checkbox>
                               ))}
-                            </HStack>
+                            </VStack>
                           </FormControl>
                         </GridItem>
                       </>
