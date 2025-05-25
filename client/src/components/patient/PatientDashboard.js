@@ -165,7 +165,7 @@ const PatientDashboard = () => {
                       <Input
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Describe your symptoms..."
+                        placeholder="Ask your health questions in any language..."
                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                       />
                       <IconButton
