@@ -149,7 +149,7 @@ const DoctorAppointments = () => {
                 <VStack align="stretch" spacing={2}>
                   <Flex justify="space-between" align="center">
                     <Box>
-                      <Text fontWeight="bold">Patient: {appointment.patientId.name}</Text>
+                      <Text fontWeight="bold">Patient: {appointment.patientId?.name || 'Unknown Patient'}</Text>
                     </Box>
                     <Badge colorScheme={getStatusColor(appointment.status)}>
                       {appointment.status.toUpperCase()}
