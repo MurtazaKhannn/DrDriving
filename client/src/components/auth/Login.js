@@ -66,7 +66,7 @@ const Login = () => {
 
       // Add a small delay before navigation to ensure toast is visible
       setTimeout(() => {
-        navigate(`/${userType}/dashboard`);
+        navigate(`/#/${userType}/dashboard`);
       }, 1000);
     } catch (error) {
       console.error('Login error:', error);
