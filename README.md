@@ -4,7 +4,7 @@ A full-stack healthcare platform built with the MERN stack (MongoDB, Express.js,
 
 ## 🌟 Features
 
-### 1. User Authentication
+### 1. User Authentication : https://www.loom.com/share/ed2b120889814f7396d9b85007aa432b?sid=7cdc423a-5d83-4260-8575-50892bf12ab4
 - Separate login/signup for doctors and patients
 - JWT-based authentication
 - Protected routes based on user type
