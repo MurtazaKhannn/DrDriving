@@ -62,37 +62,37 @@ const PatientDashboard = () => {
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
-    // Add user message to chat
     const userMessage = { type: 'user', content: message };
-    setChatHistory(prev => [...prev, userMessage]);
     setMessage('');
     setIsChatLoading(true);
 
     try {
-      // Format history according to backend requirements
+      // Add user message to chat only after successful API call
       const formattedHistory = chatHistory.map(msg => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
         message: msg.content
       }));
 
-      // Use the separate axios instance for chatbot API
       const response = await chatbotAxios.post('/api/chat', {
-        message: message,
+        message: userMessage.content,
         history: formattedHistory,
         userId: 'user123',
         doctors: doctors
       });
 
-      // Add bot response to chat using the message field from response
-      const botMessage = { type: 'bot', content: response.data.message };
-      setChatHistory(prev => [...prev, botMessage]);
+      // Add both user message and bot response at once
+      setChatHistory(prev => [
+        ...prev,
+        userMessage,
+        { type: 'bot', content: response.data.message }
+      ]);
     } catch (error) {
       console.error('Error getting chatbot response:', error);
-      const errorMessage = { 
-        type: 'bot', 
-        content: 'Sorry, I encountered an error. Please try again.' 
-      };
-      setChatHistory(prev => [...prev, errorMessage]);
+      setChatHistory(prev => [
+        ...prev,
+        userMessage,
+        { type: 'bot', content: 'Sorry, I encountered an error. Please try again.' }
+      ]);
     } finally {
       setIsChatLoading(false);
     }
@@ -117,14 +117,16 @@ const PatientDashboard = () => {
           <Grid templateColumns={{ base: '1fr', lg: 'repeat(2, 1fr)' }} gap={8}>
             <GridItem>
               <VStack spacing={4} align="stretch">
-                <Card bg={cardBg} boxShadow="md" position="sticky" top="100px" height="fit-content">
-                  <CardBody>
-                    <VStack spacing={4} align="stretch">
-                      <Heading size="md">Book an Appointment</Heading>
-                      <AppointmentForm />
-                    </VStack>
-                  </CardBody>
-                </Card>
+                <Box position="sticky" top="100px" zIndex={2}>
+                  <Card bg={cardBg} boxShadow="md">
+                    <CardBody>
+                      <VStack spacing={4} align="stretch">
+                        <Heading size="md">Book an Appointment</Heading>
+                        <AppointmentForm />
+                      </VStack>
+                    </CardBody>
+                  </Card>
+                </Box>
 
                 <Card bg={cardBg} boxShadow="md">
                   <CardBody>
