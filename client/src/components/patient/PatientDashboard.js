@@ -68,7 +68,6 @@ const PatientDashboard = () => {
     setIsChatLoading(true);
 
     try {
-      // Add user message to chat only after successful API call
       const formattedHistory = chatHistory.map(msg => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
         message: msg.content
@@ -81,7 +80,7 @@ const PatientDashboard = () => {
         doctors: doctors
       });
 
-      // Add both user message and bot response at once
+      // Only add messages after successful API call
       setChatHistory(prev => [
         ...prev,
         userMessage,
@@ -89,9 +88,9 @@ const PatientDashboard = () => {
       ]);
     } catch (error) {
       console.error('Error getting chatbot response:', error);
+      // Add error message without duplicating user message
       setChatHistory(prev => [
         ...prev,
-        userMessage,
         { type: 'bot', content: 'Sorry, I encountered an error. Please try again.' }
       ]);
     } finally {
