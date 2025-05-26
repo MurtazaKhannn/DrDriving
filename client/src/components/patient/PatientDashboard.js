@@ -124,6 +124,61 @@ const PatientDashboard = () => {
                   </VStack>
                 </CardBody>
               </Card>
+
+              <Card bg={cardBg} boxShadow="md" mt={4}>
+                <CardBody>
+                  <VStack spacing={4} align="stretch">
+                    <Heading size="md">Doctor Recommendation Assistant</Heading>
+                    <Text fontSize="sm" color="gray.600">
+                      Describe your symptoms and I'll help you find the right doctor.
+                    </Text>
+                    
+                    <Box 
+                      height="300px" 
+                      overflowY="auto" 
+                      borderWidth={1} 
+                      borderRadius="md" 
+                      p={4}
+                      bg={useColorModeValue('gray.50', 'gray.800')}
+                    >
+                      {chatHistory.map((msg, index) => (
+                        <Box
+                          key={index}
+                          mb={2}
+                          p={2}
+                          borderRadius="md"
+                          bg={msg.type === 'user' ? 'blue.100' : 'gray.100'}
+                          alignSelf={msg.type === 'user' ? 'flex-end' : 'flex-start'}
+                          maxW="80%"
+                        >
+                          <Text>{msg.content}</Text>
+                        </Box>
+                      ))}
+                      {isChatLoading && (
+                        <Flex justify="center" mt={2}>
+                          <Spinner size="sm" />
+                        </Flex>
+                      )}
+                    </Box>
+
+                    <Flex>
+                      <Input
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="Ask your health questions in any language..."
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      />
+                      <IconButton
+                        ml={2}
+                        colorScheme="blue"
+                        icon={<FaPaperPlane />}
+                        onClick={handleSendMessage}
+                        isLoading={isChatLoading}
+                      />
+                    </Flex>
+                  </VStack>
+                </CardBody>
+              </Card>
             </GridItem>
             
             <GridItem>
