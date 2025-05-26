@@ -32,6 +32,7 @@ const PatientDashboard = () => {
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [showAllDoctors, setShowAllDoctors] = useState(false);
   const navigate = useNavigate();
   const cardBg = useColorModeValue('white', 'gray.700');
 
@@ -97,6 +98,8 @@ const PatientDashboard = () => {
       setIsChatLoading(false);
     }
   };
+
+  const displayedDoctors = showAllDoctors ? doctors : doctors.slice(0, 3);
 
   return (
     <Box minH="100vh" bg="brand.light">
@@ -194,7 +197,7 @@ const PatientDashboard = () => {
                         <Text>Loading doctors...</Text>
                       ) : doctors.length > 0 ? (
                         <SimpleGrid columns={1} spacing={4}>
-                          {doctors.map(doctor => (
+                          {displayedDoctors.map(doctor => (
                             <Card key={doctor._id} variant="outline">
                               <CardBody>
                                 <VStack align="start" spacing={2}>
@@ -225,6 +228,16 @@ const PatientDashboard = () => {
                               </CardBody>
                             </Card>
                           ))}
+                          {doctors.length > 3 && (
+                            <Button
+                              onClick={() => setShowAllDoctors(!showAllDoctors)}
+                              colorScheme="blue"
+                              variant="outline"
+                              width="100%"
+                            >
+                              {showAllDoctors ? 'Show Less' : `View More (${doctors.length - 3} more)`}
+                            </Button>
+                          )}
                         </SimpleGrid>
                       ) : (
                         <Text>No doctors available at the moment.</Text>
