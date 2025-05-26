@@ -26,7 +26,7 @@ export const SocketProvider = ({ children }) => {
 
     console.log('Initializing socket connection...', { userType });
     
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io(process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000', {
       auth: { 
         token,
         userType 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, Container, Typography, Box, MenuItem, FormControlLabel, Checkbox } from '@mui/material';
-import axios from 'axios';
+import axios from '../utils/axios';
 
 const MedicalInfo = () => {
   const [formData, setFormData] = useState({
@@ -19,7 +19,7 @@ const MedicalInfo = () => {
   const fetchMedicalInfo = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/medical-info', {
+      const response = await axios.get('/medical-info', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMedicalInfo(response.data);
@@ -40,7 +40,7 @@ const MedicalInfo = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/medical-info', formData, {
+      await axios.post('/medical-info', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchMedicalInfo();

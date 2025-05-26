@@ -27,8 +27,11 @@ exports.createMedicalInfo = async (req, res) => {
       return res.status(404).json({ error: 'Doctor not found' });
     }
 
-    // Check if doctor is available on the selected day
+    // Parse the date and ensure it's in the correct timezone
     const appointmentDate = new Date(date);
+    // Set the time to midnight to avoid timezone issues
+    appointmentDate.setHours(0, 0, 0, 0);
+
     const dayOfWeek = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
     
     if (!doctor.availability.daysAvailable.includes(dayOfWeek)) {
@@ -61,10 +64,7 @@ exports.createMedicalInfo = async (req, res) => {
     // Check if there's already an appointment at this time
     const existingAppointment = await MedicalInfo.findOne({
       doctorId,
-      date: {
-        $gte: new Date(appointmentDate.setHours(0, 0, 0)),
-        $lt: new Date(appointmentDate.setHours(23, 59, 59))
-      },
+      date: appointmentDate,
       time,
       status: { $in: ['pending', 'confirmed'] }
     });
