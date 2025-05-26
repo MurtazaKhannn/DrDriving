@@ -117,16 +117,14 @@ const PatientDashboard = () => {
           <Grid templateColumns={{ base: '1fr', lg: 'repeat(2, 1fr)' }} gap={8}>
             <GridItem>
               <VStack spacing={4} align="stretch">
-                <Box position="sticky" top="100px" zIndex={2}>
-                  <Card bg={cardBg} boxShadow="md">
-                    <CardBody>
-                      <VStack spacing={4} align="stretch">
-                        <Heading size="md">Book an Appointment</Heading>
-                        <AppointmentForm />
-                      </VStack>
-                    </CardBody>
-                  </Card>
-                </Box>
+                <Card bg={cardBg} boxShadow="md">
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">Book an Appointment</Heading>
+                      <AppointmentForm />
+                    </VStack>
+                  </CardBody>
+                </Card>
 
                 <Card bg={cardBg} boxShadow="md">
                   <CardBody>
