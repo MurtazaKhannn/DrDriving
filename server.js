@@ -18,10 +18,10 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://drdriving.onrender.com"],
     methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ["Authorization"]
+    allowedHeaders: ["Authorization", "Content-Type"]
   },
   transports: ['polling', 'websocket'],
   pingTimeout: 120000,
@@ -37,8 +37,10 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
-  credentials: true
+  origin: ["http://localhost:3000", "https://drdriving.onrender.com"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Authorization", "Content-Type"]
 }));
 app.use(express.json());
 
