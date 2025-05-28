@@ -18,10 +18,10 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:3000", "https://drdriving.onrender.com"],
+    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
     methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ["Authorization", "Content-Type"]
+    allowedHeaders: ["Authorization"]
   },
   transports: ['polling', 'websocket'],
   pingTimeout: 120000,
@@ -37,10 +37,8 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(cors({
-  origin: ["http://localhost:3000", "https://drdriving.onrender.com"],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Authorization", "Content-Type"]
+  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  credentials: true
 }));
 app.use(express.json());
 
@@ -215,6 +213,20 @@ app.use('/api', authRoutes);
 app.use('/api/medical-info', medicalInfoRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/doctor', doctorRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/dr-driving', {
